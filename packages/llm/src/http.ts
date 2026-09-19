@@ -1,3 +1,5 @@
+import { safeBody } from "./redact";
+
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 
 export class LLMHttpError extends Error {
@@ -39,7 +41,10 @@ export async function postJson<T>(
 
     if (response.ok) return (await response.json()) as T;
 
-    const text = await response.text();
+    // Provider error bodies can echo the request, which carries the API key.
+    // Redact and truncate before the text reaches an error, a log, or a
+    // terminal.
+    const text = safeBody(await response.text());
     if (!RETRYABLE_STATUS.has(response.status) || attempt >= maxRetries) {
       throw new LLMHttpError(`LLM request failed (${response.status}): ${text}`, response.status, text);
     }

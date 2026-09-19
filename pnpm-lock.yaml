@@ -45,7 +45,11 @@ importers:
         specifier: ^4.0.0
         version: 4.6.5
 
-  packages/llm: {}
+  packages/llm:
+    dependencies:
+      zod:
+        specifier: ^4.0.0
+        version: 4.6.5
 
   packages/tools:
     dependencies:

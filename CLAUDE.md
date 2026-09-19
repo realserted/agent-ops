@@ -14,7 +14,7 @@ Run `pnpm typecheck && pnpm test` before declaring any task done.
 ## Architecture rules
 
 ```
-packages/llm     Provider interface + adapters. Depends on nothing but Node built-ins.
+packages/llm     Provider interface + adapters. Depends on zod and Node built-ins only.
 packages/core    Agent loop, tool registry, guardrails. Depends on llm and zod only.
 packages/tools   Tools, ports (interfaces), adapters. Depends on core and zod.
 apps/cli         Composition root. The only place that wires concrete adapters together.

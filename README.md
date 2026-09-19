@@ -1,5 +1,9 @@
 # agent-ops
 
+[![CI](https://github.com/realserted/agent-ops/actions/workflows/ci.yml/badge.svg)](https://github.com/realserted/agent-ops/actions/workflows/ci.yml)
+[![Security](https://github.com/realserted/agent-ops/actions/workflows/security.yml/badge.svg)](https://github.com/realserted/agent-ops/actions/workflows/security.yml)
+[![Coverage](https://img.shields.io/badge/coverage-99%25%20lines-brightgreen)](vitest.config.ts)
+
 An AI operations agent that triages a business inbox: it classifies emails, extracts structured records, drafts replies, and flags suspicious messages. Irreversible actions pause for human approval.
 
 Built with a hand-written agent loop (no agent framework), a provider-agnostic LLM layer, and typed tools.
@@ -32,7 +36,21 @@ pnpm agent "Only handle invoices"
 | --- | --- |
 | `pnpm agent [task]` | Run the agent from the terminal |
 | `pnpm typecheck` | Strict TypeScript check |
-| `pnpm test` | Unit tests (offline, scripted LLM) |
+| `pnpm test` | Unit, integration and adversarial tests (offline, scripted LLM) |
+| `pnpm test:watch` | Tests in watch mode |
+| `pnpm test:coverage` | Tests with coverage thresholds (80% lines, 80% functions, 75% branches) |
+
+## Security and guardrails
+
+The agent reads attacker-controlled text, so the controls are part of the design rather than a wrapper around it:
+
+- **Untrusted-content boundary** — email content is wrapped before the model sees it, and boundary markers inside a body are redacted so it cannot fake an early close.
+- **Approval gate** — `create_record` requires a human, deny-by-default. No text in an inbox can install or disable the approver.
+- **Output guardrails** — `draft_reply` rejects links absent from the email being replied to, and anything shaped like a credential.
+- **Budgets** — per-run caps on steps, tool calls and tokens, plus per-call timeouts and loop detection.
+- **Injection heuristics** — a signal that raises warnings and events; deliberately never a block.
+
+Six attack classes are exercised end to end by a scripted model that has already been injected. See [SECURITY.md](SECURITY.md) for the threat model and control map, and [docs/ADVERSARIAL_CASES.md](docs/ADVERSARIAL_CASES.md) for each attack, its control, and the accepted limitations.
 
 ## Roadmap
 
