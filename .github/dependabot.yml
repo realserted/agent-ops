@@ -6,6 +6,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # @types/node must track the Node version in .nvmrc. A newer major
+      # describes APIs the runtime does not have, which typechecks and then
+      # fails at run time. Bump this deliberately when .nvmrc moves.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       # One PR for the routine churn; majors stay separate so a breaking
       # change is never buried in a batch.
