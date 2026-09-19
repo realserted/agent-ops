@@ -26,7 +26,7 @@ apps/mcp         Composition root exposing the operations tools over MCP on stdi
 
 Composition roots are the only places that wire concrete adapters together. An app never imports another app's internals: shared contracts such as the system prompt live in a package.
 
-- Tools depend on ports (`InboxSource`, `OperationsStore`), never on concrete adapters.
+- Tools depend on ports (`InboxSource`, `OperationsStore`), never on concrete adapters. See `docs/ADAPTERS.md` for swapping in Gmail and Supabase.
 - Provider-specific types never leak out of their adapter file.
 - New LLM providers implement `LLMProvider` and register in `factory.ts`. No other changes.
 - Keep the agent loop framework-free. Do not add LangChain, LangGraph, or the Vercel AI SDK to `core`.

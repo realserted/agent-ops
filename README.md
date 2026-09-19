@@ -12,14 +12,18 @@ Built with a hand-written agent loop (no agent framework), a provider-agnostic L
 
 ```
 packages/
-  llm/     Provider interface + Gemini and Anthropic adapters (fetch only, retries with backoff)
-  core/    Agent loop, tool registry, approval gate
-  tools/   Operations tools, plus ports (InboxSource, OperationsStore) and adapters
+  llm/      Provider interface + Gemini and Anthropic adapters (fetch only, retries with backoff)
+  core/     Agent loop, tool registry, approval gate, guardrails
+  tools/    Operations tools, ports (InboxSource, OperationsStore), adapters, system prompt
+  evals/    Adversarial eval cases, grading and scoreboards
+  tracing/  Trace port, cost accounting, in-memory and MongoDB adapters
 apps/
-  cli/     Terminal runner with interactive approvals
+  cli/      Terminal runner with interactive approvals
+  evals/    Eval runner against a real model
+  mcp/      MCP server over stdio
 ```
 
-Tools depend on ports, not implementations. The fixture inbox and in-memory store are swapped for Gmail and Supabase without touching the agent or the tools.
+Tools depend on ports, not implementations. The fixture inbox and in-memory store swap for Gmail and Supabase in the composition root alone — no tool, guardrail or agent code changes. See [docs/ADAPTERS.md](docs/ADAPTERS.md) for the schema, the OAuth scope, and the row-level security policy.
 
 ## Quick start
 
@@ -81,5 +85,5 @@ Write tools are **off by default**. An MCP host calls tools on the model's say-s
 - [x] Eval harness in CI
 - [x] Tracing and cost accounting (MongoDB)
 - [x] MCP server
-- [ ] Gmail and Supabase adapters
+- [x] Gmail and Supabase adapters
 - [ ] Next.js dashboard with approval queue and trace viewer

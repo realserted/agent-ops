@@ -1,4 +1,9 @@
 export { FixtureInbox } from "./adapters/fixture-inbox";
+export { GmailInbox } from "./adapters/gmail-inbox";
+export type { GmailInboxOptions } from "./adapters/gmail-inbox";
+export { DEFAULT_TABLES, SupabaseOperationsStore } from "./adapters/supabase-store";
+export type { SupabaseStoreOptions } from "./adapters/supabase-store";
+export { AdapterHttpError } from "./adapters/http";
 export { InMemoryOperationsStore } from "./adapters/memory-store";
 export { createOperationsTools } from "./operations-tools";
 export type { OperationsToolDeps } from "./operations-tools";
