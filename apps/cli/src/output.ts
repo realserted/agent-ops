@@ -1,4 +1,5 @@
 import type { AgentEvent, AgentRunResult } from "@agent-ops/core";
+import { formatCost } from "@agent-ops/tracing";
 
 const MAX_PREVIEW = 160;
 
@@ -26,10 +27,13 @@ export function printEvent(event: AgentEvent): void {
   console.log(`  <- ${event.result.name} [${status}] ${preview(event.result.output)}`);
 }
 
-export function printSummary(result: AgentRunResult): void {
+export function printSummary(result: AgentRunResult, cost?: number): void {
   console.log(`\n${"=".repeat(60)}`);
   console.log(`Run ${result.runId}: ${result.status} in ${result.steps} steps`);
-  console.log(`Tokens: ${result.usage.inputTokens} in / ${result.usage.outputTokens} out`);
+  console.log(
+    `Tokens: ${result.usage.inputTokens} in / ${result.usage.outputTokens} out` +
+      (cost === undefined ? "" : ` (${formatCost(cost)})`),
+  );
   console.log(`${"=".repeat(60)}\n`);
   console.log(result.output || "(no final answer: step limit reached)");
 }

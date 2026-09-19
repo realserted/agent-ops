@@ -59,7 +59,7 @@ Those same six cases run against a real model via `pnpm eval`, which answers the
 
 - [x] Agent loop, LLM adapters, tools, CLI, tests, CI
 - [x] Eval harness in CI
-- [ ] Tracing and cost accounting (MongoDB)
+- [x] Tracing and cost accounting (MongoDB)
 - [ ] MCP server
 - [ ] Gmail and Supabase adapters
 - [ ] Next.js dashboard with approval queue and trace viewer

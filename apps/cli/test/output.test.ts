@@ -118,6 +118,20 @@ describe("printSummary", () => {
     expect(printed()).toContain("All done.");
   });
 
+  it("appends the estimated cost when the model is priced", () => {
+    printSummary(runResult(), 0.00042);
+
+    expect(printed()).toContain("Tokens: 100 in / 40 out ($0.00042)");
+  });
+
+  it("omits the cost entirely when the model has no published price", () => {
+    printSummary(runResult(), undefined);
+
+    expect(printed()).toContain("Tokens: 100 in / 40 out");
+    expect(printed()).not.toContain("unpriced");
+    expect(printed()).not.toContain("$");
+  });
+
   it("explains an empty answer when the step limit was reached", () => {
     printSummary(runResult({ status: "max_steps", output: "", steps: 15 }));
 

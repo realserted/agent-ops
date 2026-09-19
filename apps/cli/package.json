@@ -6,6 +6,7 @@
   "dependencies": {
     "@agent-ops/core": "workspace:*",
     "@agent-ops/llm": "workspace:*",
-    "@agent-ops/tools": "workspace:*"
+    "@agent-ops/tools": "workspace:*",
+    "@agent-ops/tracing": "workspace:*"
   }
 }

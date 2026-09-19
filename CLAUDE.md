@@ -18,6 +18,7 @@ packages/llm     Provider interface + adapters. Depends on zod and Node built-in
 packages/core    Agent loop, tool registry, guardrails. Depends on llm and zod only.
 packages/tools   Tools, ports (interfaces), adapters, system prompt. Depends on core and zod.
 packages/evals   Eval cases, grading, scoreboards. Depends on core, tools and zod. Pure and offline.
+packages/tracing Trace port, cost accounting, in-memory and MongoDB adapters. Depends on core and zod.
 apps/cli         Composition root. Wires concrete adapters for the terminal runner.
 apps/evals       Composition root for the eval runner. Calls a real model; never runs in CI on a PR.
 ```

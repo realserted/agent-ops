@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
 import readline from "node:readline/promises";
-import { Agent, ToolRegistry, type Approver } from "@agent-ops/core";
+import { Agent, ToolRegistry, type AgentEvent, type Approver } from "@agent-ops/core";
 import { createProvider } from "@agent-ops/llm";
 import { createOperationsTools, FixtureInbox, InMemoryOperationsStore } from "@agent-ops/tools";
+import { InMemoryTraceStore, startTrace } from "@agent-ops/tracing";
 import { DEFAULT_TASK, SYSTEM_PROMPT } from "./config";
 import { printEvent, printSummary } from "./output";
 
@@ -27,7 +28,13 @@ async function main(): Promise<void> {
   const inbox = await FixtureInbox.fromFile();
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-  console.log(`Provider: ${llm.name} (${llm.model})\nTask: ${task}`);
+  // In-memory for the terminal runner: a run's trace is worth seeing while it
+  // happens, but persisting it needs a database the CLI should not require.
+  // Swap in MongoTraceStore at this line to persist - see packages/tracing.
+  const traces = new InMemoryTraceStore();
+  const trace = await startTrace(traces, { provider: llm.name, model: llm.model, task });
+
+  console.log(`Provider: ${llm.name} (${llm.model})\nTask: ${task}\nTrace: ${trace.traceId}`);
 
   try {
     const agent = new Agent({
@@ -35,12 +42,21 @@ async function main(): Promise<void> {
       tools: new ToolRegistry(createOperationsTools({ inbox, store })),
       systemPrompt: SYSTEM_PROMPT,
       approve: createTerminalApprover(rl),
-      onEvent: printEvent,
+      onEvent: (event: AgentEvent) => {
+        printEvent(event);
+        trace.record(event);
+      },
     });
-    printSummary(await agent.run(task));
+
+    const result = await agent.run(task);
+    const traced = await trace.finish(result);
+    printSummary(result, traced.cost);
     console.log(
       `\nStore: ${store.records.length} records, ${store.drafts.length} drafts, ${store.flags.length} flags`,
     );
+  } catch (error) {
+    await trace.fail(error);
+    throw error;
   } finally {
     rl.close();
   }

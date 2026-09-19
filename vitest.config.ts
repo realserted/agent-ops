@@ -8,6 +8,7 @@ export default defineConfig({
       { test: { name: "tools", root: "packages/tools" } },
       { test: { name: "cli", root: "apps/cli" } },
       { test: { name: "evals", root: "packages/evals" } },
+      { test: { name: "tracing", root: "packages/tracing" } },
     ],
     coverage: {
       provider: "v8",
