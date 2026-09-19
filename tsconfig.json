@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["packages/*/src", "packages/*/test", "apps/*/src", "vitest.config.ts"]
+  "include": ["packages/*/src", "packages/*/test", "apps/cli/src", "apps/evals/src", "apps/mcp/src", "apps/*/test", "vitest.config.ts"]
 }

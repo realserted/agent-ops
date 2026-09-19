@@ -11,9 +11,9 @@ Implementation spec for Claude Code. Execute **one phase at a time**. After each
 | 3. Guardrails | Done | `dfa9095` |
 | 4. Adversarial test suite | Done | `c6f4b59` |
 | 5. Security hygiene | Done | `1a65661`, `a700d57` |
-| 6. Playwright end-to-end tests | **Blocked by design** — `apps/dashboard` does not exist | — |
+| 6. Playwright end-to-end tests | Done | with the dashboard |
 
-Phase 6 stays unimplemented until the dashboard is built, per its own instruction. Deviations from this spec, and why, are recorded in the commit messages.
+Phase 6 was unblocked once `apps/dashboard` was built as part of the roadmap. Deviations from this spec, and why, are recorded in the commit messages.
 
 ## Ground rules
 

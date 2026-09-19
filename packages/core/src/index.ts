@@ -2,7 +2,7 @@ export { Agent } from "./agent";
 export type { AgentConfig, AgentEvent, AgentRunOptions, AgentRunResult, Approver } from "./agent";
 // These appear in core's own public types, so consumers must be able to name
 // them without taking a direct dependency on the llm package.
-export type { Message, TokenUsage, ToolCall, ToolResult } from "@agent-ops/llm";
+export type { LLMProvider, Message, TokenUsage, ToolCall, ToolResult } from "@agent-ops/llm";
 export { defineTool, ToolRegistry } from "./tool";
 export type { Tool, ToolContext } from "./tool";
 export {

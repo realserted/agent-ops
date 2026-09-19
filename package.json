@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "eval": "tsx apps/evals/src/index.ts",
-    "mcp": "tsx apps/mcp/src/index.ts"
+    "mcp": "tsx apps/mcp/src/index.ts",
+    "dashboard": "pnpm --filter @agent-ops/dashboard dev",
+    "e2e": "pnpm --filter @agent-ops/dashboard e2e"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

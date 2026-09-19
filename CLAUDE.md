@@ -22,6 +22,8 @@ packages/tracing Trace port, cost accounting, in-memory and MongoDB adapters. De
 apps/cli         Composition root. Wires concrete adapters for the terminal runner.
 apps/evals       Composition root for the eval runner. Calls a real model; never runs in CI on a PR.
 apps/mcp         Composition root exposing the operations tools over MCP on stdio.
+apps/dashboard   Next.js approval queue and trace viewer. Own tsconfig; typechecked by next build.
+packages/approvals Approval queue bridging the agent to an out-of-band human decision.
 ```
 
 Composition roots are the only places that wire concrete adapters together. An app never imports another app's internals: shared contracts such as the system prompt live in a package.

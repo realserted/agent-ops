@@ -20,6 +20,7 @@ packages/
 apps/
   cli/      Terminal runner with interactive approvals
   evals/    Eval runner against a real model
+  dashboard/ Next.js approval queue and trace viewer
   mcp/      MCP server over stdio
 ```
 
@@ -45,6 +46,8 @@ pnpm agent "Only handle invoices"
 | `pnpm test:coverage` | Tests with coverage thresholds (80% lines, 80% functions, 75% branches) |
 | `pnpm eval [case-id...]` | Run the adversarial evals against a real model (costs API calls) |
 | `pnpm mcp` | Serve the operations tools over MCP on stdio |
+| `pnpm dashboard` | Run the approval queue and trace viewer on :3100 |
+| `pnpm e2e` | Playwright end-to-end tests against the dashboard (stubbed LLM) |
 
 ## Security and guardrails
 
@@ -86,4 +89,4 @@ Write tools are **off by default**. An MCP host calls tools on the model's say-s
 - [x] Tracing and cost accounting (MongoDB)
 - [x] MCP server
 - [x] Gmail and Supabase adapters
-- [ ] Next.js dashboard with approval queue and trace viewer
+- [x] Next.js dashboard with approval queue and trace viewer
