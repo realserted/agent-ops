@@ -1,20 +1,8 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { GenerateResponse, LLMProvider, ToolCall } from "@agent-ops/llm";
+import type { GenerateResponse, ToolCall } from "@agent-ops/llm";
 import { Agent, defineTool, ToolRegistry } from "../src/index";
-
-/** Replays a fixed sequence of responses so the loop can be tested offline. */
-class ScriptedProvider implements LLMProvider {
-  readonly name = "scripted";
-  readonly model = "test";
-  constructor(private readonly responses: GenerateResponse[]) {}
-  async generate(): Promise<GenerateResponse> {
-    const next = this.responses.shift();
-    if (!next) throw new Error("ScriptedProvider ran out of responses");
-    return next;
-  }
-}
+import { ScriptedProvider } from "./helpers/scripted-provider";
 
 const usage = { inputTokens: 10, outputTokens: 5 };
 const callTool = (name: string, args: Record<string, unknown>): GenerateResponse => ({
@@ -53,38 +41,38 @@ describe("Agent", () => {
   it("executes a tool, feeds the result back, and returns the final answer", async () => {
     const result = await buildAgent([callTool("add", { a: 2, b: 3 }), answer("The sum is 5")]).run("2+3?");
 
-    assert.equal(result.status, "completed");
-    assert.equal(result.output, "The sum is 5");
-    assert.equal(result.steps, 2);
-    assert.deepEqual(result.usage, { inputTokens: 20, outputTokens: 10 });
-    assert.deepEqual(toolOutputs(result)[0]?.output, { sum: 5 });
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("The sum is 5");
+    expect(result.steps).toBe(2);
+    expect(result.usage).toEqual({ inputTokens: 20, outputTokens: 10 });
+    expect(toolOutputs(result)[0]?.output).toEqual({ sum: 5 });
   });
 
   it("returns validation errors to the model instead of throwing", async () => {
     const result = await buildAgent([callTool("add", { a: "two" }), answer("done")]).run("x");
     const [toolResult] = toolOutputs(result);
 
-    assert.equal(toolResult?.isError, true);
-    assert.match(JSON.stringify(toolResult?.output), /Invalid arguments/);
+    expect(toolResult?.isError).toBe(true);
+    expect(JSON.stringify(toolResult?.output)).toMatch(/Invalid arguments/);
   });
 
   it("denies approval-gated tools when no approver is configured", async () => {
     const result = await buildAgent([callTool("delete_everything", {}), answer("skipped")]).run("x");
 
-    assert.equal(toolOutputs(result)[0]?.isError, true);
+    expect(toolOutputs(result)[0]?.isError).toBe(true);
   });
 
   it("runs approval-gated tools once approved", async () => {
     const result = await buildAgent([callTool("delete_everything", {}), answer("done")], async () => true).run("x");
 
-    assert.deepEqual(toolOutputs(result)[0]?.output, { deleted: true });
+    expect(toolOutputs(result)[0]?.output).toEqual({ deleted: true });
   });
 
   it("stops at maxSteps when the model never finishes", async () => {
     const loop = Array.from({ length: 3 }, () => callTool("add", { a: 1, b: 1 }));
     const result = await buildAgent(loop).run("x");
 
-    assert.equal(result.status, "max_steps");
-    assert.equal(result.steps, 3);
+    expect(result.status).toBe("max_steps");
+    expect(result.steps).toBe(3);
   });
 });

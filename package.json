@@ -8,11 +8,15 @@
   "scripts": {
     "agent": "tsx apps/cli/src/index.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "tsx --test \"packages/*/test/**/*.test.ts\""
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^5.0.1",
     "tsx": "^4.20.0",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "vitest": "^5.0.1"
   }
 }

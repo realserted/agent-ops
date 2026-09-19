@@ -2,5 +2,10 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# esbuild's postinstall links its platform-specific binary; tsx needs it.
+# allowBuilds is read by pnpm 11+, onlyBuiltDependencies by pnpm 10 (used in CI).
+allowBuilds:
+  esbuild: true
+
 onlyBuiltDependencies:
   - esbuild
