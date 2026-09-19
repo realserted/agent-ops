@@ -2,6 +2,19 @@
 
 Implementation spec for Claude Code. Execute **one phase at a time**. After each phase, run `pnpm typecheck && pnpm test:coverage`, report the results, and stop for review.
 
+## Status
+
+| Phase | State | Commit |
+| --- | --- | --- |
+| 1. Migrate to Vitest | Done | `fc4382f` |
+| 2. Unit and integration coverage | Done | `28bb62b` |
+| 3. Guardrails | Done | `dfa9095` |
+| 4. Adversarial test suite | Done | `c6f4b59` |
+| 5. Security hygiene | Done | `1a65661`, `a700d57` |
+| 6. Playwright end-to-end tests | **Blocked by design** — `apps/dashboard` does not exist | — |
+
+Phase 6 stays unimplemented until the dashboard is built, per its own instruction. Deviations from this spec, and why, are recorded in the commit messages.
+
 ## Ground rules
 
 - Preserve all current behavior unless a phase explicitly changes it.
