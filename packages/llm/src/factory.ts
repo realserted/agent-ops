@@ -4,7 +4,7 @@ import type { LLMProvider } from "./types";
 
 const DEFAULT_MODELS = {
   gemini: "gemini-2.5-flash",
-  anthropic: "claude-sonnet-5",
+  anthropic: "claude-haiku-4-5",
 } as const;
 
 type ProviderName = keyof typeof DEFAULT_MODELS;
