@@ -1,8 +1,15 @@
 import { expect, test } from "@playwright/test";
 
+// The queue and runs list are process-wide state, so each test starts clean.
+// Without this, one test's leftover approval blocks the next test's run from
+// finishing and "the first pending item" may belong to another test.
+test.beforeEach(async ({ request }) => {
+  await request.post("/api/test/reset");
+});
+
 /**
  * The scripted provider drives every run: list_emails, get_email on the
- * phishing fixture, flag_for_review, then an approval-gated create_record.
+ * adversarial fixture, flag_for_review, then an approval-gated create_record.
  * So each run reliably parks exactly one request in the queue.
  */
 const startRun = async (page: import("@playwright/test").Page) => {

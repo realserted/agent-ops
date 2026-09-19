@@ -27,14 +27,32 @@ interface Runtime {
 const KEY = Symbol.for("agent-ops.dashboard.runtime");
 const globalRef = globalThis as unknown as { [KEY]?: Runtime };
 
+const freshRuntime = (): Runtime => ({
+  approvals: new ApprovalQueue({ timeoutMs: 5 * 60 * 1000 }),
+  traces: new InMemoryTraceStore(),
+  store: new InMemoryOperationsStore(),
+  running: new Set<string>(),
+});
+
 export function runtime(): Runtime {
-  globalRef[KEY] ??= {
-    approvals: new ApprovalQueue({ timeoutMs: 5 * 60 * 1000 }),
-    traces: new InMemoryTraceStore(),
-    store: new InMemoryOperationsStore(),
-    running: new Set<string>(),
-  };
+  globalRef[KEY] ??= freshRuntime();
   return globalRef[KEY];
+}
+
+/**
+ * Clears all state between end-to-end tests.
+ *
+ * The queue and the runs list are process-wide, so without this one test's
+ * leftover approval blocks the next test's run from ever finishing, and "the
+ * first pending item" may belong to a run the test did not start.
+ *
+ * Denies everything in flight first, so the agent runs those tests started
+ * unblock and exit rather than being stranded on a promise nothing will
+ * resolve.
+ */
+export function resetRuntime(): void {
+  globalRef[KEY]?.approvals.denyAll();
+  globalRef[KEY] = freshRuntime();
 }
 
 const ADVERSARIAL_FIXTURE = new URL(

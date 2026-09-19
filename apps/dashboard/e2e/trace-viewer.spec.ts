@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+// The queue and runs list are process-wide state, so each test starts clean.
+// Without this, one test's leftover approval blocks the next test's run from
+// finishing and "the first pending item" may belong to another test.
+test.beforeEach(async ({ request }) => {
+  await request.post("/api/test/reset");
+});
+
 const startAndOpenTrace = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await page.getByTestId("start-run").click();
