@@ -29,7 +29,7 @@ export class AnthropicProvider implements LLMProvider {
     private readonly maxTokens = 4096,
   ) {}
 
-  async generate({ system, messages, tools }: GenerateRequest): Promise<GenerateResponse> {
+  async generate({ system, messages, tools, timeoutMs }: GenerateRequest): Promise<GenerateResponse> {
     const body = {
       model: this.model,
       max_tokens: this.maxTokens,
@@ -42,6 +42,7 @@ export class AnthropicProvider implements LLMProvider {
 
     const data = await postJson<AnthropicResponse>(API_URL, body, {
       headers: { "x-api-key": this.apiKey, "anthropic-version": API_VERSION },
+      timeoutMs,
     });
 
     return {

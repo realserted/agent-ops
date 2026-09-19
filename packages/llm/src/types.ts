@@ -17,6 +17,8 @@ export interface ToolResult {
   name: string;
   output: unknown;
   isError: boolean;
+  /** Guardrail signals about this result. Advisory: they never imply an error. */
+  warnings?: string[];
 }
 
 /**
@@ -42,6 +44,8 @@ export interface GenerateRequest {
   system: string;
   messages: Message[];
   tools: ToolDefinition[];
+  /** Abort the request after this many milliseconds. */
+  timeoutMs?: number;
 }
 
 export interface GenerateResponse {

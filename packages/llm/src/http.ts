@@ -15,6 +15,8 @@ interface PostJsonOptions {
   headers: Record<string, string>;
   maxRetries?: number;
   baseDelayMs?: number;
+  /** Abort each attempt after this many milliseconds. */
+  timeoutMs?: number;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -23,13 +25,16 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function postJson<T>(
   url: string,
   body: unknown,
-  { headers, maxRetries = 3, baseDelayMs = 1000 }: PostJsonOptions,
+  { headers, maxRetries = 3, baseDelayMs = 1000, timeoutMs }: PostJsonOptions,
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", ...headers },
       body: JSON.stringify(body),
+      // A fresh signal per attempt: one shared signal would already be expired
+      // for every retry after the first.
+      ...(timeoutMs !== undefined && { signal: AbortSignal.timeout(timeoutMs) }),
     });
 
     if (response.ok) return (await response.json()) as T;

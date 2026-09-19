@@ -83,6 +83,17 @@ describe("printEvent", () => {
     expect(printed()).toContain("<- get_email [ok] plain text");
   });
 
+  it("surfaces a guardrail warning with the tool that triggered it", () => {
+    printEvent({
+      type: "guardrail",
+      step: 2,
+      tool: "get_email",
+      warnings: ["role_impersonation", "instruction_override"],
+    });
+
+    expect(printed()).toContain("!! get_email flagged: role_impersonation, instruction_override");
+  });
+
   it("truncates output longer than 160 characters", () => {
     printEvent(toolResult("x".repeat(200)));
 

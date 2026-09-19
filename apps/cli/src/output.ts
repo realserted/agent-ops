@@ -17,6 +17,11 @@ export function printEvent(event: AgentEvent): void {
     return;
   }
 
+  if (event.type === "guardrail") {
+    console.log(`  !! ${event.tool} flagged: ${event.warnings.join(", ")}`);
+    return;
+  }
+
   const status = event.result.isError ? "ERROR" : "ok";
   console.log(`  <- ${event.result.name} [${status}] ${preview(event.result.output)}`);
 }

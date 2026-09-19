@@ -45,7 +45,7 @@ export class GeminiProvider implements LLMProvider {
     readonly model: string,
   ) {}
 
-  async generate({ system, messages, tools }: GenerateRequest): Promise<GenerateResponse> {
+  async generate({ system, messages, tools, timeoutMs }: GenerateRequest): Promise<GenerateResponse> {
     const body = {
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map(toGeminiContent),
@@ -54,6 +54,7 @@ export class GeminiProvider implements LLMProvider {
 
     const data = await postJson<GeminiResponse>(`${BASE_URL}/${this.model}:generateContent`, body, {
       headers: { "x-goog-api-key": this.apiKey },
+      timeoutMs,
     });
 
     const content = data.candidates?.[0]?.content;

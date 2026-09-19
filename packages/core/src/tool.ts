@@ -11,6 +11,12 @@ export interface Tool<S extends z.ZodType = z.ZodType> {
   schema: S;
   /** Irreversible or externally visible actions must be approved by a human. */
   requiresApproval?: boolean;
+  /**
+   * Output originates outside the system (email bodies, senders, subjects).
+   * The agent wraps it in an untrusted-content envelope before the model
+   * sees it, and scans it for injection patterns.
+   */
+  untrustedOutput?: boolean;
   execute(args: z.infer<S>, context: ToolContext): Promise<unknown>;
 }
 
