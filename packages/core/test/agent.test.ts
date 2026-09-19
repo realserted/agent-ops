@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { GenerateResponse, ToolCall } from "@agent-ops/llm";
-import { Agent, defineTool, ToolRegistry } from "../src/index";
-import { ScriptedProvider } from "./helpers/scripted-provider";
-
-const usage = { inputTokens: 10, outputTokens: 5 };
-const callTool = (name: string, args: Record<string, unknown>): GenerateResponse => ({
-  content: "", toolCalls: [{ id: `call_${name}`, name, args }], usage,
-});
-const answer = (content: string): GenerateResponse => ({ content, toolCalls: [], usage });
+import { Agent, type AgentEvent, defineTool, ToolRegistry } from "../src/index";
+import { answer, callTool, callTools, ScriptedProvider } from "./helpers/scripted-provider";
 
 const addTool = defineTool({
   name: "add",
   description: "Add two numbers",
   schema: z.object({ a: z.number(), b: z.number() }),
   execute: async ({ a, b }) => ({ sum: a + b }),
+});
+
+const explodeTool = defineTool({
+  name: "explode",
+  description: "Always throws",
+  schema: z.object({}),
+  execute: async () => {
+    throw new Error("boom");
+  },
 });
 
 const deleteTool = defineTool({
@@ -25,13 +28,18 @@ const deleteTool = defineTool({
   execute: async () => ({ deleted: true }),
 });
 
-const buildAgent = (responses: GenerateResponse[], approve?: (call: ToolCall) => Promise<boolean>) =>
+const buildAgent = (
+  responses: GenerateResponse[],
+  approve?: (call: ToolCall) => Promise<boolean>,
+  onEvent?: (event: AgentEvent) => void,
+) =>
   new Agent({
     llm: new ScriptedProvider(responses),
-    tools: new ToolRegistry([addTool, deleteTool]),
+    tools: new ToolRegistry([addTool, deleteTool, explodeTool]),
     systemPrompt: "test",
     maxSteps: 3,
     approve,
+    onEvent,
   });
 
 const toolOutputs = (result: Awaited<ReturnType<Agent["run"]>>) =>
@@ -74,5 +82,56 @@ describe("Agent", () => {
 
     expect(result.status).toBe("max_steps");
     expect(result.steps).toBe(3);
+  });
+
+  it("turns a throwing tool into an error result instead of failing the run", async () => {
+    const result = await buildAgent([callTool("explode", {}), answer("recovered")]).run("x");
+
+    expect(toolOutputs(result)[0]).toMatchObject({ isError: true, output: { error: "boom" } });
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("recovered");
+  });
+
+  it("returns an error for an unknown tool name", async () => {
+    const result = await buildAgent([callTool("no_such_tool", {}), answer("done")]).run("x");
+    const [toolResult] = toolOutputs(result);
+
+    expect(toolResult?.isError).toBe(true);
+    expect(toolResult?.output).toEqual({ error: 'Unknown tool "no_such_tool".' });
+  });
+
+  it("accumulates usage across every step", async () => {
+    const result = await buildAgent([
+      callTool("add", { a: 1, b: 1 }),
+      callTool("add", { a: 2, b: 2 }),
+      answer("done"),
+    ]).run("x");
+
+    expect(result.steps).toBe(3);
+    expect(result.usage).toEqual({ inputTokens: 30, outputTokens: 15 });
+  });
+
+  it("emits each step's llm_response before its tool results, in call order", async () => {
+    const events: AgentEvent[] = [];
+    await buildAgent(
+      [
+        callTools([
+          { name: "add", args: { a: 1, b: 1 } },
+          { name: "add", args: { a: 2, b: 2 } },
+        ]),
+        answer("done"),
+      ],
+      undefined,
+      (event) => events.push(event),
+    ).run("x");
+
+    expect(events.map((e) => `${e.type}:${e.step}`)).toEqual([
+      "llm_response:1",
+      "tool_result:1",
+      "tool_result:1",
+      "llm_response:2",
+    ]);
+    const sums = events.flatMap((e) => (e.type === "tool_result" ? [e.result.output] : []));
+    expect(sums).toEqual([{ sum: 2 }, { sum: 4 }]);
   });
 });
