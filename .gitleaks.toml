@@ -1,0 +1,22 @@
+title = "agent-ops"
+
+[extend]
+useDefault = true
+
+# The secret-detection guardrail and its redaction counterpart can only be
+# tested against strings shaped like real credentials, so these files carry
+# synthetic vectors on purpose - repeated characters and obvious placeholders,
+# never a live key.
+#
+# The allowlist names each file rather than globbing the test tree: a new file
+# with credential shapes should fail the scan and force a deliberate decision
+# about whether it belongs here.
+[allowlist]
+description = "Synthetic credential shapes used as test vectors"
+paths = [
+  '''packages/llm/test/redact\.test\.ts''',
+  '''packages/llm/test/env\.test\.ts''',
+  '''packages/core/test/guardrails/secrets\.test\.ts''',
+  '''packages/tools/test/operations-tools\.test\.ts''',
+  '''packages/tools/test/adversarial\.test\.ts''',
+]
