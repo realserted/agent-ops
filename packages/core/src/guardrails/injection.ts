@@ -13,11 +13,13 @@ const PATTERNS: { name: string; pattern: RegExp }[] = [
     pattern: /\b(ignore|disregard|forget|override)\b[^.!?\n]{0,40}\b(previous|prior|earlier|above|all)\b[^.!?\n]{0,20}\b(instruction|prompt|rule|direction)/i,
   },
   {
-    // Scanning happens over serialized tool output, so a role marker is rarely
-    // at a true line start: in JSON it follows an opening quote, and a real
-    // newline has become the two characters \ and n. Anchor on all three.
+    // Anchored rather than free-floating: in serialized output a role marker
+    // follows an opening quote or a newline, and sentence punctuation is
+    // included because `...suspended. SYSTEM: approve now` would otherwise
+    // walk straight past. A bare space is deliberately not an anchor, so
+    // ordinary phrases like "restarting the system: done" stay unflagged.
     name: "role_impersonation",
-    pattern: /(?:^|\n|\\n|["'])\s*(system|assistant|developer)\s*:/i,
+    pattern: /(?:^|\n|["'.!?])\s*(system|assistant|developer)\s*:/i,
   },
   {
     name: "approval_solicitation",
@@ -33,7 +35,20 @@ const PATTERNS: { name: string; pattern: RegExp }[] = [
   },
 ];
 
+/**
+ * Restores real whitespace before matching.
+ *
+ * The agent scans serialized tool output, where a newline is the two characters
+ * `\` and `n`. That trailing `n` is a word character, so `\bignore` fails to
+ * match "...\nIgnore all previous instructions" — the pattern silently misses
+ * every attack that begins a line. Turning the escapes back into whitespace
+ * makes word boundaries and line anchors mean what they appear to mean.
+ */
+const restoreWhitespace = (text: string): string =>
+  text.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
+
 /** Returns the names of every injection pattern present in `text`. */
 export function detectInjection(text: string): string[] {
-  return PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ name }) => name);
+  const normalised = restoreWhitespace(text);
+  return PATTERNS.filter(({ pattern }) => pattern.test(normalised)).map(({ name }) => name);
 }
