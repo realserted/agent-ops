@@ -1,0 +1,13 @@
+{
+  "name": "@agent-ops/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agent-ops/llm": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}

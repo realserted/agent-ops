@@ -1,0 +1,11 @@
+{
+  "name": "@agent-ops/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@agent-ops/core": "workspace:*",
+    "@agent-ops/llm": "workspace:*",
+    "@agent-ops/tools": "workspace:*"
+  }
+}

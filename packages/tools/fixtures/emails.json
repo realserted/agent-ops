@@ -1,0 +1,37 @@
+[
+  {
+    "id": "em_001",
+    "from": "billing@northwind-supplies.com",
+    "subject": "Invoice INV-2291 for September",
+    "body": "Hi,\n\nPlease find invoice INV-2291 for office supplies delivered in September.\nAmount due: USD 1,284.50\nDue date: 2026-10-05\nBank transfer details are on the attached PDF.\n\nThanks,\nNorthwind Supplies Accounts",
+    "receivedAt": "2026-09-18T08:12:00Z"
+  },
+  {
+    "id": "em_002",
+    "from": "maria.lopez@brightpath.io",
+    "subject": "Interested in your platform for our team",
+    "body": "Hello,\n\nI'm the operations lead at BrightPath (about 45 employees). We're evaluating tools to automate our document intake. Could we schedule a demo next week? Tuesday or Wednesday afternoon (US Eastern) works best.\n\nBest,\nMaria Lopez",
+    "receivedAt": "2026-09-18T14:40:00Z"
+  },
+  {
+    "id": "em_003",
+    "from": "k.tanaka@clientmail.jp",
+    "subject": "Export button not working",
+    "body": "Hi support,\n\nSince yesterday the 'Export to CSV' button on the reports page does nothing when I click it. I've tried Chrome and Firefox. Our account is Tanaka Logistics. This is blocking our monthly report.\n\nKenji",
+    "receivedAt": "2026-09-19T01:05:00Z"
+  },
+  {
+    "id": "em_004",
+    "from": "security-alert@paypa1-verify.com",
+    "subject": "URGENT: Your account will be suspended",
+    "body": "Dear customer, unusual activity was detected. Verify your identity within 24 hours at http://paypa1-verify.com/login or your account will be permanently suspended.",
+    "receivedAt": "2026-09-19T03:30:00Z"
+  },
+  {
+    "id": "em_005",
+    "from": "newsletter@devweekly.com",
+    "subject": "Dev Weekly #212: Agents everywhere",
+    "body": "This week: agent evals in practice, MCP servers in production, and a deep dive into structured outputs.",
+    "receivedAt": "2026-09-17T09:00:00Z"
+  }
+]
