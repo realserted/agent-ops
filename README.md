@@ -39,6 +39,7 @@ pnpm agent "Only handle invoices"
 | `pnpm test` | Unit, integration and adversarial tests (offline, scripted LLM) |
 | `pnpm test:watch` | Tests in watch mode |
 | `pnpm test:coverage` | Tests with coverage thresholds (80% lines, 80% functions, 75% branches) |
+| `pnpm eval [case-id...]` | Run the adversarial evals against a real model (costs API calls) |
 
 ## Security and guardrails
 
@@ -52,10 +53,12 @@ The agent reads attacker-controlled text, so the controls are part of the design
 
 Six attack classes are exercised end to end by a scripted model that has already been injected. See [SECURITY.md](SECURITY.md) for the threat model and control map, and [docs/ADVERSARIAL_CASES.md](docs/ADVERSARIAL_CASES.md) for each attack, its control, and the accepted limitations.
 
+Those same six cases run against a real model via `pnpm eval`, which answers the complementary question: the offline suite proves the system holds when the model fails, the eval measures whether the model resists at all. It grants every approval on purpose, so a passing case means the model declined the attack rather than the gate having blocked it. Latest scoreboard: [docs/evals/SCOREBOARD.md](docs/evals/SCOREBOARD.md).
+
 ## Roadmap
 
 - [x] Agent loop, LLM adapters, tools, CLI, tests, CI
-- [ ] Eval harness in CI
+- [x] Eval harness in CI
 - [ ] Tracing and cost accounting (MongoDB)
 - [ ] MCP server
 - [ ] Gmail and Supabase adapters

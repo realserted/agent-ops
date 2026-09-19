@@ -1,0 +1,12 @@
+{
+  "name": "@agent-ops/eval-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@agent-ops/core": "workspace:*",
+    "@agent-ops/evals": "workspace:*",
+    "@agent-ops/llm": "workspace:*",
+    "@agent-ops/tools": "workspace:*"
+  }
+}

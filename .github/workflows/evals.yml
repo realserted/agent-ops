@@ -1,0 +1,45 @@
+name: Evals
+
+# Deliberately not on pull_request: every run spends real API calls, so this
+# is scheduled plus on-demand rather than gating each change. The offline
+# adversarial suite in CI is what guards every PR.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: "Space-separated case ids, or blank for all"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial:
+    name: Adversarial evals
+    runs-on: ubuntu-latest
+    # Without a key the job would fail every night for a reason unrelated to
+    # the model's behaviour.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.EVALS_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm eval ${{ github.event.inputs.cases }}
+        env:
+          LLM_PROVIDER: ${{ vars.EVAL_LLM_PROVIDER || 'anthropic' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-scoreboard
+          path: docs/evals/SCOREBOARD.md

@@ -7,14 +7,16 @@ export default defineConfig({
       { test: { name: "core", root: "packages/core" } },
       { test: { name: "tools", root: "packages/tools" } },
       { test: { name: "cli", root: "apps/cli" } },
+      { test: { name: "evals", root: "packages/evals" } },
     ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
       include: ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"],
-      // Barrel files re-export only; apps/cli/src/index.ts is the composition
-      // root and is exercised end-to-end rather than by unit tests.
-      exclude: ["**/index.ts", "apps/cli/src/index.ts"],
+      // Barrel files re-export only; the apps/* entry points are composition
+      // roots, exercised end-to-end rather than by unit tests. The eval runner
+      // additionally cannot run offline - it exists to call a real model.
+      exclude: ["**/index.ts", "apps/cli/src/index.ts", "apps/evals/src/index.ts"],
       // Targets from Phase 2 of docs/HARDENING_PLAN.md. Actual coverage sits
       // well above these; the margin is deliberate headroom for the guardrail
       // code Phase 3 adds.

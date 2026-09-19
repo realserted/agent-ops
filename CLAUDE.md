@@ -16,9 +16,13 @@ Run `pnpm typecheck && pnpm test` before declaring any task done.
 ```
 packages/llm     Provider interface + adapters. Depends on zod and Node built-ins only.
 packages/core    Agent loop, tool registry, guardrails. Depends on llm and zod only.
-packages/tools   Tools, ports (interfaces), adapters. Depends on core and zod.
-apps/cli         Composition root. The only place that wires concrete adapters together.
+packages/tools   Tools, ports (interfaces), adapters, system prompt. Depends on core and zod.
+packages/evals   Eval cases, grading, scoreboards. Depends on core, tools and zod. Pure and offline.
+apps/cli         Composition root. Wires concrete adapters for the terminal runner.
+apps/evals       Composition root for the eval runner. Calls a real model; never runs in CI on a PR.
 ```
+
+Composition roots are the only places that wire concrete adapters together. An app never imports another app's internals: shared contracts such as the system prompt live in a package.
 
 - Tools depend on ports (`InboxSource`, `OperationsStore`), never on concrete adapters.
 - Provider-specific types never leak out of their adapter file.

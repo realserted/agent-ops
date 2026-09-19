@@ -36,11 +36,38 @@ importers:
         specifier: workspace:*
         version: link:../../packages/tools
 
+  apps/evals:
+    dependencies:
+      '@agent-ops/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@agent-ops/evals':
+        specifier: workspace:*
+        version: link:../../packages/evals
+      '@agent-ops/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@agent-ops/tools':
+        specifier: workspace:*
+        version: link:../../packages/tools
+
   packages/core:
     dependencies:
       '@agent-ops/llm':
         specifier: workspace:*
         version: link:../llm
+      zod:
+        specifier: ^4.0.0
+        version: 4.6.5
+
+  packages/evals:
+    dependencies:
+      '@agent-ops/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agent-ops/tools':
+        specifier: workspace:*
+        version: link:../tools
       zod:
         specifier: ^4.0.0
         version: 4.6.5
