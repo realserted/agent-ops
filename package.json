@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "eval": "tsx apps/evals/src/index.ts"
+    "eval": "tsx apps/evals/src/index.ts",
+    "mcp": "tsx apps/mcp/src/index.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

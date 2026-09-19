@@ -21,6 +21,7 @@ packages/evals   Eval cases, grading, scoreboards. Depends on core, tools and zo
 packages/tracing Trace port, cost accounting, in-memory and MongoDB adapters. Depends on core and zod.
 apps/cli         Composition root. Wires concrete adapters for the terminal runner.
 apps/evals       Composition root for the eval runner. Calls a real model; never runs in CI on a PR.
+apps/mcp         Composition root exposing the operations tools over MCP on stdio.
 ```
 
 Composition roots are the only places that wire concrete adapters together. An app never imports another app's internals: shared contracts such as the system prompt live in a package.

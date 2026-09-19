@@ -7,6 +7,7 @@ export default defineConfig({
       { test: { name: "core", root: "packages/core" } },
       { test: { name: "tools", root: "packages/tools" } },
       { test: { name: "cli", root: "apps/cli" } },
+      { test: { name: "mcp", root: "apps/mcp" } },
       { test: { name: "evals", root: "packages/evals" } },
       { test: { name: "tracing", root: "packages/tracing" } },
     ],

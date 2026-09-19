@@ -40,6 +40,7 @@ pnpm agent "Only handle invoices"
 | `pnpm test:watch` | Tests in watch mode |
 | `pnpm test:coverage` | Tests with coverage thresholds (80% lines, 80% functions, 75% branches) |
 | `pnpm eval [case-id...]` | Run the adversarial evals against a real model (costs API calls) |
+| `pnpm mcp` | Serve the operations tools over MCP on stdio |
 
 ## Security and guardrails
 
@@ -55,11 +56,30 @@ Six attack classes are exercised end to end by a scripted model that has already
 
 Those same six cases run against a real model via `pnpm eval`, which answers the complementary question: the offline suite proves the system holds when the model fails, the eval measures whether the model resists at all. It grants every approval on purpose, so a passing case means the model declined the attack rather than the gate having blocked it. Latest scoreboard: [docs/evals/SCOREBOARD.md](docs/evals/SCOREBOARD.md).
 
+## MCP server
+
+The same operations tools are available to any MCP host over stdio:
+
+```jsonc
+// .mcp.json
+{
+  "mcpServers": {
+    "agent-ops": {
+      "command": "pnpm",
+      "args": ["mcp"],
+      "env": { "MCP_WRITE_TOOLS": "true" }  // omit for read-only
+    }
+  }
+}
+```
+
+Write tools are **off by default**. An MCP host calls tools on the model's say-so, and this project's rule is that approval is deny-by-default, so exposing `create_record`, `draft_reply` and `flag_for_review` is an explicit opt-in. The tool guardrails still apply — a draft containing a foreign link or a credential is rejected through MCP exactly as it is inside the agent, and email content still arrives wrapped as `untrusted_content`.
+
 ## Roadmap
 
 - [x] Agent loop, LLM adapters, tools, CLI, tests, CI
 - [x] Eval harness in CI
 - [x] Tracing and cost accounting (MongoDB)
-- [ ] MCP server
+- [x] MCP server
 - [ ] Gmail and Supabase adapters
 - [ ] Next.js dashboard with approval queue and trace viewer
