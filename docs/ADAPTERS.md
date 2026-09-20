@@ -7,7 +7,51 @@ The agent and the tools depend on two ports, never on a concrete adapter:
 
 Moving from the fixture inbox and in-memory store to Gmail and Supabase is a change in the composition root ([`apps/cli/src/index.ts`](../apps/cli/src/index.ts)) and nowhere else. No tool, guardrail or agent code changes.
 
-## Gmail
+## Gmail: two adapters, and why
+
+There are two ways to read Gmail here, and the choice is about Google's OAuth policy rather than about code.
+
+| | `ImapInbox` | `GmailInbox` |
+| --- | --- | --- |
+| Transport | IMAP | Gmail REST API |
+| Auth | App Password | OAuth 2.0 |
+| Scope | none — no OAuth involved | `gmail.readonly`, a **restricted** scope |
+| To run it for real | enable 2FA, create an App Password | OAuth verification **plus an annual paid security assessment** (CASA) |
+| Cost | none | four figures per year |
+
+`gmail.readonly` is in Google's strictest tier. Publishing an app that uses it requires verification *and* a recurring third-party security assessment. Most of the Gmail scope family is restricted too — `gmail.modify`, `gmail.compose`, `gmail.metadata`, `https://mail.google.com/` — so narrowing the scope does not escape it, and `gmail.metadata` would not return bodies anyway.
+
+There is an escape hatch: an app left in **Testing** publishing status skips verification entirely. It is capped at 100 test users and its refresh tokens expire after 7 days, so a long-lived agent would start failing weekly until someone re-consents. Workable for a demo you run deliberately; not for anything left running.
+
+**`ImapInbox` is the default recommendation for personal use.** IMAP is a protocol the account already speaks, so no scope is requested, nothing needs verifying, and nothing is assessed. `GmailInbox` remains the right choice if you are building something with real third-party users, where you would be going through verification regardless.
+
+Google moves these policies; confirm the current CASA tier and token-expiry rules before budgeting anything.
+
+### ImapInbox
+
+```ts
+import { ImapInbox } from "@agent-ops/tools";
+
+const inbox = new ImapInbox({
+  user: process.env.GMAIL_IMAP_USER!,
+  appPassword: process.env.GMAIL_IMAP_APP_PASSWORD!,
+  mailbox: "INBOX", // or "[Gmail]/All Mail"
+});
+```
+
+**What you need to provide**
+
+1. 2-Step Verification enabled on the account — App Passwords are unavailable without it.
+2. An App Password generated under Google Account → Security → App passwords. This is not your account password, and it can be revoked independently.
+3. IMAP enabled in Gmail settings → Forwarding and POP/IMAP.
+
+The adapter opens a connection per call rather than holding one. An agent run makes a handful of calls minutes apart, and a held IMAP connection idles out mid-run — failing in a way that looks like an empty inbox rather than an error.
+
+Message UIDs become email ids. That matters because `email_id` is schema-hardened to `^[a-zA-Z0-9_-]{1,64}$`; a UID is digits, so it passes, and `get` refuses anything non-numeric before it reaches an IMAP command.
+
+One caveat: Google has been retiring password-based access, and the timeline differed between Workspace and personal accounts. Check that App Passwords still appear in your account's security settings before relying on this.
+
+### GmailInbox
 
 `GmailInbox` reads a real mailbox through the Gmail REST API. It is read-only by construction: `InboxSource` has no write operations and the scope it needs cannot send or delete mail.
 
@@ -108,4 +152,4 @@ Identical to the fixture wiring — that is the point of the ports.
 
 ## What is not covered
 
-Both adapters are tested against stubbed HTTP, not against live services. The request shapes, auth headers, error handling and field mapping are verified; whether Google and Supabase behave as documented is not. Run against a real project before trusting either in production, and expect to discover at least one thing about pagination or rate limits that the docs did not mention.
+All three adapters are tested against stubs rather than live services - stubbed HTTP for Gmail and Supabase, a fake IMAP client for ImapInbox. Request shapes, auth headers, protocol sequencing, error handling and field mapping are verified; whether Google and Supabase behave as documented is not. Run against a real project before trusting either in production, and expect to discover at least one thing about pagination or rate limits that the docs did not mention.

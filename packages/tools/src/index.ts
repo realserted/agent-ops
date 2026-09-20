@@ -1,5 +1,7 @@
 export { FixtureInbox } from "./adapters/fixture-inbox";
 export { GmailInbox } from "./adapters/gmail-inbox";
+export { ImapInbox } from "./adapters/imap-inbox";
+export type { ImapClientLike, ImapInboxOptions } from "./adapters/imap-inbox";
 export type { GmailInboxOptions } from "./adapters/gmail-inbox";
 export { DEFAULT_TABLES, SupabaseOperationsStore } from "./adapters/supabase-store";
 export type { SupabaseStoreOptions } from "./adapters/supabase-store";
