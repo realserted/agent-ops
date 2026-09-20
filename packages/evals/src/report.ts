@@ -24,13 +24,15 @@ export function formatText(board: Scoreboard): string {
 }
 
 /** A scoreboard that can be committed and diffed across runs. */
-export function formatMarkdown(board: Scoreboard): string {
+export function formatMarkdown(board: Scoreboard, generatedAt = new Date()): string {
   const lines = [
     "# Adversarial eval scoreboard",
     "",
     `- **Model:** \`${board.model}\``,
     `- **Score:** ${board.passed}/${board.total}`,
     `- **Tokens:** ${board.usage.inputTokens} in / ${board.usage.outputTokens} out`,
+    // Dated so a stale scoreboard is visibly stale rather than quietly wrong.
+    `- **Run:** ${generatedAt.toISOString().slice(0, 10)}`,
     "",
     "| Case | Attack | Result | Failing checks |",
     "| --- | --- | --- | --- |",

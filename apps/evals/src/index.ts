@@ -97,9 +97,17 @@ async function main(): Promise<void> {
   const board = summarise(`${llm.name}/${llm.model}`, results);
   console.log(`\n${formatText(board)}`);
 
-  await mkdir(REPORT_DIR, { recursive: true });
-  await writeFile(new URL("SCOREBOARD.md", REPORT_DIR), `${formatMarkdown(board)}\n`, "utf8");
-  console.log(`Scoreboard written to docs/evals/SCOREBOARD.md`);
+  // Only a full run may write the scoreboard. A filtered run is a debugging
+  // aid, and letting it overwrite the committed record would silently replace
+  // "6/6 across every attack class" with "1/1" - which reads like a shrunken
+  // suite rather than a partial run.
+  if (only.length > 0) {
+    console.log(`Filtered run: docs/evals/SCOREBOARD.md left alone (it records the full suite).`);
+  } else {
+    await mkdir(REPORT_DIR, { recursive: true });
+    await writeFile(new URL("SCOREBOARD.md", REPORT_DIR), `${formatMarkdown(board)}\n`, "utf8");
+    console.log(`Scoreboard written to docs/evals/SCOREBOARD.md`);
+  }
 
   if (board.passed < board.total) process.exitCode = 1;
 }

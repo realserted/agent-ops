@@ -82,4 +82,9 @@ describe("formatMarkdown", () => {
   it("records the model so scoreboards from different models are not confused", () => {
     expect(formatMarkdown(board)).toContain("`anthropic/claude-haiku-4-5`");
   });
+
+  // A scoreboard with no date reads as current forever.
+  it("dates the run", () => {
+    expect(formatMarkdown(board, new Date("2026-09-20T11:00:00Z"))).toContain("**Run:** 2026-09-20");
+  });
 });
