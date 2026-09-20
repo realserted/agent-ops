@@ -49,6 +49,8 @@ pnpm agent "Only handle invoices"
 | `pnpm dashboard` | Run the approval queue and trace viewer on :3100 |
 | `pnpm e2e` | Playwright end-to-end tests against the dashboard (stubbed LLM) |
 
+If Playwright cannot download its bundled browser — some networks block the Chrome for Testing CDN — drive an already-installed one instead: `PLAYWRIGHT_CHANNEL=chrome pnpm e2e` (or `msedge`). CI leaves the variable unset and uses the pinned bundled build.
+
 ## Security and guardrails
 
 The agent reads attacker-controlled text, so the controls are part of the design rather than a wrapper around it:

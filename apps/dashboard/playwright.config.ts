@@ -17,7 +17,20 @@ export default defineConfig({
   },
   // Chromium only: these assert application behaviour, not rendering
   // differences, so a second engine would double the time for no new signal.
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  //
+  // PLAYWRIGHT_CHANNEL drives an already-installed browser instead of the
+  // bundled build - set it to "chrome" or "msedge" when Playwright's browser
+  // download is blocked, which it is on some networks. CI leaves it unset and
+  // uses the pinned bundled Chromium, so the canonical run stays reproducible.
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+      },
+    },
+  ],
   webServer: {
     command: "pnpm --filter @agent-ops/dashboard start",
     url: `http://127.0.0.1:${PORT}`,
