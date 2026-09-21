@@ -12,6 +12,8 @@ export interface ImapClientLike {
   connect(): Promise<void>;
   logout(): Promise<void>;
   getMailboxLock(mailbox: string): Promise<{ release(): void }>;
+  /** Populated once a mailbox is selected; `exists` is its message count. */
+  mailbox?: { exists: number } | false;
   fetch(
     range: string,
     query: Record<string, unknown>,
@@ -104,6 +106,19 @@ export function formatSender(envelope: ImapEnvelopeLike | undefined): string {
   return first.name && first.address ? `${first.name} <${first.address}>` : (first.address ?? first.name ?? "");
 }
 
+/**
+ * Drains an async iterable into an array.
+ *
+ * Exists so the FETCH response is fully consumed before any other IMAP command
+ * is issued: the protocol runs one command at a time, and holding a FETCH open
+ * while awaiting a download deadlocks the connection.
+ */
+async function collect<T>(iterable: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+  for await (const item of iterable) items.push(item);
+  return items;
+}
+
 async function readStream(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk as Buffer));
@@ -180,20 +195,30 @@ export class ImapInbox implements InboxSource {
 
   async list(limit: number): Promise<Email[]> {
     return this.withMailbox(async (client) => {
-      const emails: Email[] = [];
-      // Newest first: a descending UID range, capped so a large mailbox cannot
-      // pull thousands of bodies.
-      for await (const message of client.fetch(
-        `${Math.max(1, limit)}:*`,
-        { uid: true, envelope: true, bodyStructure: true, internalDate: true },
-        { uid: false },
-      )) {
-        emails.push(await this.toEmail(client, message));
-      }
+      // The range must be anchored to the message count. "10:*" means
+      // "message 10 to the end", which on a real mailbox is thousands of
+      // messages and a body download for each - the opposite of a limit.
+      const exists = typeof client.mailbox === "object" && client.mailbox ? client.mailbox.exists : 0;
+      if (exists === 0) return [];
 
-      return emails
-        .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
-        .slice(0, limit);
+      const start = Math.max(1, exists - limit + 1);
+
+      // Drain the FETCH before downloading anything. IMAP runs one command at
+      // a time, so a download issued mid-iteration queues behind a FETCH that
+      // cannot finish until the iteration ends - the connection deadlocks and
+      // dies on a socket timeout. Only a real server shows this.
+      const messages = await collect(
+        client.fetch(
+          `${start}:${exists}`,
+          { uid: true, envelope: true, bodyStructure: true, internalDate: true },
+          { uid: false },
+        ),
+      );
+
+      const emails: Email[] = [];
+      for (const message of messages) emails.push(await this.toEmail(client, message));
+
+      return emails.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)).slice(0, limit);
     });
   }
 
@@ -201,14 +226,16 @@ export class ImapInbox implements InboxSource {
     if (!/^\d+$/.test(id)) return undefined;
 
     return this.withMailbox(async (client) => {
-      for await (const message of client.fetch(
-        id,
-        { uid: true, envelope: true, bodyStructure: true, internalDate: true },
-        { uid: true },
-      )) {
-        return this.toEmail(client, message);
-      }
-      return undefined;
+      // Drained first, for the same reason as `list`.
+      const [message] = await collect(
+        client.fetch(
+          id,
+          { uid: true, envelope: true, bodyStructure: true, internalDate: true },
+          { uid: true },
+        ),
+      );
+
+      return message ? this.toEmail(client, message) : undefined;
     });
   }
 }

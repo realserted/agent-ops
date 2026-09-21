@@ -25,6 +25,7 @@ const message = (overrides: Partial<ImapMessageLike> = {}): ImapMessageLike => (
 class FakeClient implements ImapClientLike {
   readonly calls: string[] = [];
   released = 0;
+  private fetching = false;
   constructor(
     private readonly messages: ImapMessageLike[],
     private readonly bodies: Record<string, string> = { "42": "Please find the invoice attached." },
@@ -45,11 +46,31 @@ class FakeClient implements ImapClientLike {
       },
     };
   }
+  get mailbox() {
+    return { exists: this.messages.length };
+  }
+  // Honours the sequence range, so a range that would pull the whole mailbox
+  // is visible as wrong output rather than passing silently.
   async *fetch(range: string, _query: Record<string, unknown>, options?: Record<string, unknown>) {
     this.calls.push(`fetch:${range}:uid=${String(options?.uid)}`);
-    for (const m of this.messages) yield m;
+    this.fetching = true;
+    try {
+    if (options?.uid) {
+      for (const m of this.messages.filter((m) => String(m.uid) === range)) yield m;
+      return;
+    }
+    const [from, to] = range.split(":");
+    const start = Number(from);
+    const end = to === "*" ? this.messages.length : Number(to);
+    for (const m of this.messages.slice(start - 1, end)) yield m;
+    } finally {
+      this.fetching = false;
+    }
   }
   async download(uid: string) {
+    // IMAP runs one command at a time. A download issued while a FETCH is
+    // still streaming deadlocks a real server; fail loudly instead.
+    if (this.fetching) throw new Error("download issued while a FETCH was still open");
     this.calls.push(`download:${uid}`);
     const body = this.bodies[uid];
     return body === undefined ? false : { content: Readable.from([Buffer.from(body, "utf8")]) };
@@ -145,7 +166,8 @@ describe("ImapInbox", () => {
   });
 
   it("releases the lock and logs out even when the fetch fails", async () => {
-    const client = new FakeClient([]);
+    // Needs a non-empty mailbox: an empty one returns early without fetching.
+    const client = new FakeClient([message()]);
     vi.spyOn(client, "fetch").mockImplementation(() => {
       throw new Error("connection reset");
     });
@@ -195,6 +217,32 @@ describe("ImapInbox", () => {
 
   it("returns an empty inbox rather than throwing when there is no mail", async () => {
     await expect(inbox(new FakeClient([])).list(10)).resolves.toEqual([]);
+  });
+
+  // Regression: the range was `${limit}:*`, which means "message N to the end"
+  // - on a real mailbox that is thousands of messages and a body download for
+  // each, the exact opposite of a limit.
+  it("asks only for the newest N messages, anchored to the message count", async () => {
+    const many = Array.from({ length: 500 }, (_, i) =>
+      message({ uid: i + 1, envelope: { subject: `m${i + 1}`, date: new Date(2026, 0, 1, 0, i) } }),
+    );
+    const bodies = Object.fromEntries(many.map((m) => [String(m.uid), "body"]));
+    const client = new FakeClient(many, bodies);
+
+    const emails = await inbox(client).list(5);
+
+    expect(client.calls).toContain("fetch:496:500:uid=false");
+    expect(emails).toHaveLength(5);
+    // One download per returned message, not per mailbox message.
+    expect(client.calls.filter((c) => c.startsWith("download:"))).toHaveLength(5);
+  });
+
+  it("does not ask for a range below 1 when the mailbox is smaller than the limit", async () => {
+    const client = new FakeClient([message({ uid: 1 })], { "1": "body" });
+
+    await inbox(client).list(50);
+
+    expect(client.calls).toContain("fetch:1:1:uid=false");
   });
 
   describe("get", () => {
