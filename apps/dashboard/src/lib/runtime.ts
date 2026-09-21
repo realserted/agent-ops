@@ -5,7 +5,9 @@ import {
   createOperationsTools,
   FixtureInbox,
   InMemoryOperationsStore,
+  loadInbox,
   SYSTEM_PROMPT,
+  type InboxChoice,
 } from "@agent-ops/tools";
 import { InMemoryTraceStore, startTrace, type TraceStore } from "@agent-ops/tracing";
 
@@ -67,13 +69,24 @@ const ADVERSARIAL_FIXTURE = new URL(
  * so the end-to-end tests have an email that actually carries an injection.
  * The demo inbox deliberately does not: its phishing message targets a human
  * reader and raises no guardrail, which is correct but untestable.
+ *
+ * Otherwise the environment decides, so pointing the dashboard at a real
+ * mailbox is the same two variables as pointing the CLI at one.
  */
-async function loadInbox(): Promise<FixtureInbox> {
-  const benign = await FixtureInbox.fromFile();
-  if (process.env.AGENT_OPS_TEST_PROVIDER !== "scripted") return benign;
+async function resolveInbox(): Promise<InboxChoice> {
+  if (process.env.AGENT_OPS_TEST_PROVIDER === "scripted") {
+    const [benign, adversarial] = await Promise.all([
+      FixtureInbox.fromFile(),
+      FixtureInbox.fromFile(ADVERSARIAL_FIXTURE),
+    ]);
+    return {
+      inbox: new FixtureInbox([...(await benign.list(50)), ...(await adversarial.list(50))]),
+      description: "fixture inbox (test)",
+      live: false,
+    };
+  }
 
-  const adversarial = await FixtureInbox.fromFile(ADVERSARIAL_FIXTURE);
-  return new FixtureInbox([...(await benign.list(50)), ...(await adversarial.list(50))]);
+  return loadInbox();
 }
 
 export interface StartRunResult {
@@ -90,7 +103,7 @@ export interface StartRunResult {
 export async function startRun(task: string): Promise<StartRunResult> {
   const { approvals, traces, store, running } = runtime();
   const llm = dashboardProvider();
-  const inbox = await loadInbox();
+  const { inbox } = await resolveInbox();
 
   const trace = await startTrace(traces, { provider: llm.name, model: llm.model, task });
   running.add(trace.traceId);

@@ -10,5 +10,7 @@ export { InMemoryOperationsStore } from "./adapters/memory-store";
 export { createOperationsTools } from "./operations-tools";
 export type { OperationsToolDeps } from "./operations-tools";
 export type { InboxSource, OperationsStore } from "./ports";
+export { createInbox, loadInbox } from "./inbox-factory";
+export type { InboxChoice } from "./inbox-factory";
 export { DEFAULT_TASK, SYSTEM_PROMPT } from "./prompt";
 export * from "./types";

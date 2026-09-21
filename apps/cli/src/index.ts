@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import readline from "node:readline/promises";
 import { Agent, ToolRegistry, type AgentEvent, type Approver } from "@agent-ops/core";
 import { createProvider } from "@agent-ops/llm";
-import { createOperationsTools, FixtureInbox, InMemoryOperationsStore } from "@agent-ops/tools";
+import { createOperationsTools, InMemoryOperationsStore, loadInbox } from "@agent-ops/tools";
 import { InMemoryTraceStore, startTrace } from "@agent-ops/tracing";
 import { DEFAULT_TASK, SYSTEM_PROMPT } from "./config";
 import { printEvent, printSummary } from "./output";
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const task = process.argv.slice(2).join(" ") || DEFAULT_TASK;
   const llm = createProvider();
   const store = new InMemoryOperationsStore();
-  const inbox = await FixtureInbox.fromFile();
+  const { inbox, description, live } = await loadInbox();
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
   // In-memory for the terminal runner: a run's trace is worth seeing while it
@@ -34,7 +34,11 @@ async function main(): Promise<void> {
   const traces = new InMemoryTraceStore();
   const trace = await startTrace(traces, { provider: llm.name, model: llm.model, task });
 
-  console.log(`Provider: ${llm.name} (${llm.model})\nTask: ${task}\nTrace: ${trace.traceId}`);
+  console.log(
+    `Provider: ${llm.name} (${llm.model})\n` +
+      `Inbox: ${description}${live ? "  *** LIVE MAIL ***" : ""}\n` +
+      `Task: ${task}\nTrace: ${trace.traceId}`,
+  );
 
   try {
     const agent = new Agent({

@@ -153,3 +153,28 @@ Identical to the fixture wiring — that is the point of the ports.
 ## What is not covered
 
 All three adapters are tested against stubs rather than live services - stubbed HTTP for Gmail and Supabase, a fake IMAP client for ImapInbox. Request shapes, auth headers, protocol sequencing, error handling and field mapping are verified; whether Google and Supabase behave as documented is not. Run against a real project before trusting either in production, and expect to discover at least one thing about pagination or rate limits that the docs did not mention.
+
+## Running against your own mailbox
+
+Both the CLI and the dashboard pick their inbox from the environment, so no code changes:
+
+```bash
+# .env
+GMAIL_IMAP_USER=you@gmail.com
+GMAIL_IMAP_APP_PASSWORD=abcd efgh ijkl mnop   # App Password, not your account password
+GMAIL_IMAP_MAILBOX=INBOX                       # optional
+```
+
+```bash
+pnpm agent                 # prints "Inbox: Gmail over IMAP (...)  *** LIVE MAIL ***"
+pnpm dashboard             # same inbox, with the approval queue
+```
+
+Leave both variables unset and you get the fixture inbox. Setting only one is an error rather than a silent fall back — a run that quietly triaged five fake emails when you meant your own inbox looks like it worked.
+
+### Before you point it at real mail
+
+- **Start with a label, not the whole inbox.** Set `GMAIL_IMAP_MAILBOX` to a folder you filter a few messages into. The agent is read-only, but the first real run is where you find out how your actual mail parses.
+- **Every run costs tokens.** A five-email fixture run is about $0.02 on Haiku. A hundred-message mailbox is proportionally more, and `list_emails` fetches bodies for everything it lists.
+- **Real mail means real content in traces.** `InMemoryTraceStore` keeps full tool output — including email bodies — in memory for the life of the process. That is fine locally; persisting traces to MongoDB would put that content at rest, so treat the trace store as holding the same sensitivity as the mailbox itself.
+- **The guardrails now matter for real.** Everything in `SECURITY.md` was written for this case: your actual correspondents are the untrusted input.
