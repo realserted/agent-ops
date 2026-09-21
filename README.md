@@ -51,6 +51,21 @@ pnpm agent "Only handle invoices"
 
 If Playwright cannot download its bundled browser — some networks block the Chrome for Testing CDN — drive an already-installed one instead: `PLAYWRIGHT_CHANNEL=chrome pnpm e2e` (or `msedge`). CI leaves the variable unset and uses the pinned bundled build.
 
+## Running the dashboard safely
+
+`Ctrl+C` in the terminal running `pnpm dashboard` stops it. On Windows a server started in a background shell can outlive that, and `pkill` does not match Node processes under Git Bash, so a stale one keeps holding the port while the next start silently fails to bind. To check and clear it, in PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3100 -State Listen |
+  Select-Object LocalAddress, OwningProcess
+
+Get-NetTCPConnection -LocalPort 3100 -State Listen |
+  Select-Object -ExpandProperty OwningProcess -Unique |
+  ForEach-Object { Stop-Process -Id $_ -Force }
+```
+
+An idle dashboard costs nothing — the pages poll in-memory state and make no model or IMAP calls until someone starts a run. It binds to `127.0.0.1` only, so it is not reachable from other machines on the network. That matters because there is no authentication yet: anyone who can open it can start a run, which spends your API key and reads your mailbox.
+
 ## Security and guardrails
 
 The agent reads attacker-controlled text, so the controls are part of the design rather than a wrapper around it:
@@ -92,18 +107,3 @@ Write tools are **off by default**. An MCP host calls tools on the model's say-s
 - [x] MCP server
 - [x] Gmail and Supabase adapters
 - [x] Next.js dashboard with approval queue and trace viewer
-
-### Stopping the dashboard
-
-`Ctrl+C` in the terminal running `pnpm dashboard` stops it. On Windows a server started in a background shell can outlive that, and `pkill` does not match Node processes under Git Bash, so a stale one keeps holding the port while the next start silently fails to bind. To check and clear it, in PowerShell:
-
-```powershell
-Get-NetTCPConnection -LocalPort 3100 -State Listen |
-  Select-Object LocalAddress, OwningProcess
-
-Get-NetTCPConnection -LocalPort 3100 -State Listen |
-  Select-Object -ExpandProperty OwningProcess -Unique |
-  ForEach-Object { Stop-Process -Id $_ -Force }
-```
-
-An idle dashboard costs nothing — the pages poll in-memory state and make no model or IMAP calls until someone starts a run. It binds to `127.0.0.1` only, so it is not reachable from other machines on the network. That matters because there is no authentication yet: anyone who can open it can start a run, which spends your API key and reads your mailbox.
