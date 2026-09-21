@@ -30,8 +30,24 @@ const PATTERNS: { name: string; pattern: RegExp }[] = [
     pattern: /\b(send|forward|email|reply with|transmit)\b[^.!?\n]{0,30}\b(all|every|each|the full|a list of|summary of)\b/i,
   },
   {
+    // Tuned against real mail, where the original pattern flagged 100% of
+    // ordinary messages - a guardrail that always fires teaches its operator
+    // to ignore it.
+    //
+    // Zero-width characters are gone from this rule entirely. Bulk senders use
+    // them everywhere, including mid-word through addresses and domains to
+    // defeat scrapers, so they cannot discriminate in any form. The inbox
+    // adapters strip them instead, which turns a keyword-splitting evasion
+    // back into plain text for the instruction patterns to catch - defeating
+    // the technique rather than reporting it.
+    //
+    // The CSS and comment signals stay: adapters convert HTML to text, so
+    // markup surviving into a body is genuinely odd rather than routine.
+    // Bidirectional overrides stay too - they are a real spoofing signal and
+    // are rare in ordinary correspondence.
     name: "hidden_text",
-    pattern: /<!--|\bdisplay\s*:\s*none\b|\bfont-size\s*:\s*0|\bvisibility\s*:\s*hidden\b|[​-‏‪-‮⁠﻿]/i,
+    pattern:
+      /<!--|\bdisplay\s*:\s*none\b|\bfont-size\s*:\s*0|\bvisibility\s*:\s*hidden\b|[‪-‮]/i,
   },
 ];
 

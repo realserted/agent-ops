@@ -82,7 +82,7 @@ const inbox = (client: ImapClientLike, overrides = {}) =>
 
 describe("findTextPart", () => {
   it("finds the part number of a plain-text body", () => {
-    expect(findTextPart({ type: "text/plain", part: "1" })).toBe("1");
+    expect(findTextPart({ type: "text/plain", part: "1" })).toEqual({ part: "1", isHtml: false });
   });
 
   it("prefers text/plain over an html sibling", () => {
@@ -94,7 +94,7 @@ describe("findTextPart", () => {
       ],
     });
 
-    expect(part).toBe("2");
+    expect(part).toEqual({ part: "2", isHtml: false });
   });
 
   it("descends into nested multiparts", () => {
@@ -103,11 +103,12 @@ describe("findTextPart", () => {
       childNodes: [{ type: "multipart/alternative", childNodes: [{ type: "text/plain", part: "1.2" }] }],
     });
 
-    expect(part).toBe("1.2");
+    expect(part).toEqual({ part: "1.2", isHtml: false });
   });
 
-  it("falls back to an html-only message rather than returning nothing", () => {
-    expect(findTextPart({ type: "text/html", part: "1" })).toBe("1");
+  // Reported as HTML so the adapter converts it instead of handing a model markup.
+  it("falls back to an html-only message and marks it as HTML", () => {
+    expect(findTextPart({ type: "text/html", part: "1" })).toEqual({ part: "1", isHtml: true });
   });
 
   it("returns undefined when there is no text part at all", () => {

@@ -1,4 +1,5 @@
 import { requestJson } from "./http";
+import { htmlToText, looksLikeHtml, stripInvisible } from "./html-to-text";
 import type { InboxSource } from "../ports";
 import type { Email } from "../types";
 
@@ -44,7 +45,7 @@ const header = (payload: GmailPart | undefined, name: string): string =>
  */
 function findPlain(part: GmailPart | undefined): string {
   if (!part) return "";
-  if (part.mimeType === "text/plain" && part.body?.data) return decodeBody(part.body.data);
+  if (part.mimeType === "text/plain" && part.body?.data) return stripInvisible(decodeBody(part.body.data));
 
   for (const child of part.parts ?? []) {
     const found = findPlain(child);
@@ -53,10 +54,22 @@ function findPlain(part: GmailPart | undefined): string {
   return "";
 }
 
-/** Any leaf body, for single-part messages and ones with no plain alternative. */
+/**
+ * Any leaf body, for single-part messages and ones with no plain alternative.
+ *
+ * Converts when the leaf is HTML: plenty of transactional mail is `text/html`
+ * only, and handing a model ~20k characters of markup costs an order of
+ * magnitude more tokens than the text inside it.
+ */
 function findAnyLeaf(part: GmailPart | undefined): string {
   if (!part) return "";
-  if (!part.parts?.length) return part.body?.data ? decodeBody(part.body.data) : "";
+  if (!part.parts?.length) {
+    if (!part.body?.data) return "";
+    const decoded = decodeBody(part.body.data);
+    return part.mimeType === "text/html" || looksLikeHtml(decoded)
+      ? htmlToText(decoded)
+      : stripInvisible(decoded);
+  }
 
   for (const child of part.parts) {
     const found = findAnyLeaf(child);

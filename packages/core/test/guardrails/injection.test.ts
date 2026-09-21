@@ -37,8 +37,32 @@ describe("detectInjection", () => {
     expect(found).toContain("hidden_text");
   });
 
-  it("detects zero-width characters used to hide text", () => {
-    expect(detectInjection("normal text​hidden")).toContain("hidden_text");
+  it("detects a bidirectional override, which real mail almost never contains", () => {
+    expect(detectInjection("invoice‮gpj.exe")).toContain("hidden_text");
+  });
+
+  // Regression: every one of these is a real body from a live mailbox, and the
+  // original rule flagged all of them. A guardrail that fires on 100% of
+  // ordinary mail trains its operator to ignore it.
+  //
+  // Zero-widths are no longer a signal in any form - bulk senders pad with
+  // them and split words with them. The adapters strip them instead, so a
+  // keyword-splitting evasion arrives here as plain text.
+  it.each([
+    ["preheader padding between words", "Your receipt​ ​ ​ is attached."],
+    ["a scraper-defeating address", "54​8 M​a​r​k​e​t S​t, PMB 90375"],
+    ["a split domain name", "publish it live to claude.a​i and update it"],
+    ["a byte-order mark", "﻿Subscription confirmed"],
+  ])("does not flag %s", (_label, text) => {
+    expect(detectInjection(text)).not.toContain("hidden_text");
+  });
+
+  it("does not flag an ordinary newsletter body", () => {
+    const body =
+      "Hi there,\n\nThis week in Claude Code: /design, Concise output, and more.\n\n" +
+      "Read the changelog for details. Unsubscribe at any time.";
+
+    expect(detectInjection(body)).toEqual([]);
   });
 
   // The agent scans serialized tool output, so role markers sit after a JSON

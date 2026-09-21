@@ -1,3 +1,4 @@
+import { htmlToText, stripInvisible } from "./html-to-text";
 import type { InboxSource } from "../ports";
 import type { Email } from "../types";
 
@@ -64,9 +65,15 @@ export interface ImapInboxOptions {
 
 const DEFAULTS = { host: "imap.gmail.com", port: 993, mailbox: "INBOX" };
 
-function findPlainPart(node: ImapBodyStructureLike | undefined): string | undefined {
+export interface ChosenPart {
+  part: string;
+  /** The body needs converting before a model reads it. */
+  isHtml: boolean;
+}
+
+function findPlainPart(node: ImapBodyStructureLike | undefined): ChosenPart | undefined {
   if (!node) return undefined;
-  if (node.type === "text/plain") return node.part ?? "1";
+  if (node.type === "text/plain") return { part: node.part ?? "1", isHtml: false };
 
   for (const child of node.childNodes ?? []) {
     const found = findPlainPart(child);
@@ -76,9 +83,13 @@ function findPlainPart(node: ImapBodyStructureLike | undefined): string | undefi
 }
 
 /** Any text leaf, for messages with no plain alternative. */
-function findAnyTextPart(node: ImapBodyStructureLike | undefined): string | undefined {
+function findAnyTextPart(node: ImapBodyStructureLike | undefined): ChosenPart | undefined {
   if (!node) return undefined;
-  if (!node.childNodes?.length) return node.type?.startsWith("text/") ? (node.part ?? "1") : undefined;
+  if (!node.childNodes?.length) {
+    return node.type?.startsWith("text/")
+      ? { part: node.part ?? "1", isHtml: node.type === "text/html" }
+      : undefined;
+  }
 
   for (const child of node.childNodes) {
     const found = findAnyTextPart(child);
@@ -95,8 +106,12 @@ function findAnyTextPart(node: ImapBodyStructureLike | undefined): string | unde
  * reaches first, so an HTML alternative listed before the plain one silently
  * inverts the preference — the exact bug this had on the first attempt, and
  * the same one the Gmail adapter had.
+ *
+ * Reports whether the chosen part is HTML, because plenty of real mail is
+ * `text/html` with no plain alternative at all and handing that markup to a
+ * model costs an order of magnitude more tokens than the text it contains.
  */
-export function findTextPart(node: ImapBodyStructureLike | undefined): string | undefined {
+export function findTextPart(node: ImapBodyStructureLike | undefined): ChosenPart | undefined {
   return findPlainPart(node) ?? findAnyTextPart(node);
 }
 
@@ -175,12 +190,18 @@ export class ImapInbox implements InboxSource {
 
   private async toEmail(client: ImapClientLike, message: ImapMessageLike): Promise<Email> {
     const uid = String(message.uid);
-    const part = findTextPart(message.bodyStructure);
+    const chosen = findTextPart(message.bodyStructure);
 
     let body = "";
-    if (part) {
-      const downloaded = await client.download(uid, part, { uid: true });
-      if (downloaded) body = await readStream(downloaded.content);
+    if (chosen) {
+      const downloaded = await client.download(uid, chosen.part, { uid: true });
+      if (downloaded) {
+        const raw = await readStream(downloaded.content);
+        // Plain bodies still need invisibles removed: bulk senders split words
+        // with zero-widths, which is both noise for the model and the shape a
+        // keyword-splitting injection would take.
+        body = chosen.isHtml ? htmlToText(raw) : stripInvisible(raw);
+      }
     }
 
     const date = message.envelope?.date ?? message.internalDate;
