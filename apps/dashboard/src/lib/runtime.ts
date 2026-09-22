@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { Agent, ToolRegistry, type AgentEvent } from "@agent-ops/core";
 import { ApprovalQueue } from "@agent-ops/approvals";
 import { dashboardProvider } from "./provider";
@@ -10,6 +12,33 @@ import {
   type InboxChoice,
 } from "@agent-ops/tools";
 import { InMemoryTraceStore, startTrace, type TraceStore } from "@agent-ops/tracing";
+
+/**
+ * Loads the monorepo's .env.
+ *
+ * Next only auto-loads .env from the app directory, so the root file the CLI
+ * and the eval runner both read is invisible here - the dashboard would fall
+ * back to the default provider and report a missing key even though the key
+ * is configured.
+ *
+ * Resolved from the working directory rather than import.meta.url, because
+ * the bundled server output does not sit where the source does. Tries the
+ * repo root and the app directory, so it works whether pnpm was run from the
+ * workspace root or from apps/dashboard.
+ */
+function loadRootEnv(): void {
+  for (const candidate of [resolve(process.cwd(), ".env"), resolve(process.cwd(), "../../.env")]) {
+    if (!existsSync(candidate)) continue;
+    try {
+      process.loadEnvFile(candidate);
+      return;
+    } catch {
+      // Unreadable or malformed: fall through to the shell environment.
+    }
+  }
+}
+
+loadRootEnv();
 
 /**
  * Process-wide singletons.
