@@ -3,8 +3,38 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { PendingApproval, ResolvedApproval } from "@agent-ops/approvals";
+import { QuarantinedEmail } from "../../components/Quarantine";
 
 const POLL_MS = 1_000;
+
+/** The email an action refers to, when its arguments name one. */
+const emailIdOf = (args: Record<string, unknown>): string | undefined =>
+  typeof args.email_id === "string" ? args.email_id : undefined;
+
+function Arguments({ args }: { args: Record<string, unknown> }) {
+  const entries = Object.entries(args).filter(([key]) => key !== "email_id");
+
+  return (
+    <dl className="fields" data-testid="pending-args">
+      {entries.map(([key, value]) => (
+        <div key={key} style={{ display: "contents" }}>
+          <dt>{key.replace(/_/g, " ")}</dt>
+          <dd>
+            {Array.isArray(value)
+              ? value
+                  .map((v) =>
+                    v && typeof v === "object" && "name" in v && "value" in v
+                      ? `${String((v as { name: unknown }).name)}: ${String((v as { value: unknown }).value)}`
+                      : JSON.stringify(v),
+                  )
+                  .join(" · ")
+              : String(value)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export default function ApprovalsPage() {
   const [pending, setPending] = useState<PendingApproval[]>([]);
@@ -41,72 +71,76 @@ export default function ApprovalsPage() {
 
   return (
     <>
-      <h1>Approval queue</h1>
+      <h1>Waiting on you</h1>
 
       {pending.length === 0 ? (
         <p className="muted" data-testid="queue-empty">
-          Nothing waiting. A run pauses here when it reaches an action that needs a human.
+          Nothing to decide. A run stops here when it reaches an action that needs a human.
         </p>
       ) : (
         <div data-testid="pending-list">
-          {pending.map((item) => (
-            <div className="panel" key={item.id} data-testid="pending-item">
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <strong data-testid="pending-tool">{item.toolName}</strong>
-                <span className="muted">{new Date(item.requestedAt).toLocaleTimeString()}</span>
-              </div>
+          {pending.map((item) => {
+            const emailId = emailIdOf(item.args);
+            return (
+              <div className="entry" key={item.id} data-testid="pending-item">
+                <div className="entry-head">
+                  <span className="kind" data-testid="pending-tool">
+                    {item.toolName.replace(/_/g, " ")}
+                  </span>
+                  <span className="meta">{new Date(item.requestedAt).toLocaleTimeString()}</span>
+                  {item.traceId && (
+                    <Link href={`/runs/${item.traceId}`} className="meta">
+                      see the run
+                    </Link>
+                  )}
+                </div>
 
-              <pre data-testid="pending-args">{JSON.stringify(item.args, null, 2)}</pre>
+                <Arguments args={item.args} />
 
-              <div className="row" style={{ marginTop: "0.8rem" }}>
-                <button
-                  className="primary"
-                  onClick={() => void decide(item.id, "approved")}
-                  disabled={busy === item.id}
-                  data-testid="approve"
-                >
-                  Approve
-                </button>
-                <button
-                  className="danger"
-                  onClick={() => void decide(item.id, "denied")}
-                  disabled={busy === item.id}
-                  data-testid="deny"
-                >
-                  Deny
-                </button>
-                {item.traceId && (
-                  <Link href={`/traces/${item.traceId}`} className="muted">
-                    view trace
-                  </Link>
-                )}
+                {/* Read the source before vouching for what was pulled out of it. */}
+                {emailId && <QuarantinedEmail emailId={emailId} />}
+
+                <div className="bar" style={{ marginTop: "0.8rem" }}>
+                  <button
+                    className="assert"
+                    onClick={() => void decide(item.id, "approved")}
+                    disabled={busy === item.id}
+                    data-testid="approve"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="refuse"
+                    onClick={() => void decide(item.id, "denied")}
+                    disabled={busy === item.id}
+                    data-testid="deny"
+                  >
+                    Deny
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <h2>Recently decided</h2>
+      <h2>Already decided</h2>
       {resolved.length === 0 ? (
         <p className="muted">Nothing yet.</p>
       ) : (
         <table data-testid="resolved-table">
           <thead>
             <tr>
-              <th>Tool</th>
+              <th>Action</th>
               <th>Decision</th>
-              <th>Decided</th>
+              <th>When</th>
             </tr>
           </thead>
           <tbody>
             {resolved.map((item) => (
               <tr key={item.id} data-testid="resolved-row">
-                <td>{item.toolName}</td>
-                <td>
-                  <span className={`badge${item.decision === "approved" ? "" : " badge-error"}`}>
-                    {item.decision}
-                  </span>
-                </td>
+                <td>{item.toolName.replace(/_/g, " ")}</td>
+                <td className={item.decision === "approved" ? undefined : "tag-refuse"}>{item.decision}</td>
                 <td className="muted">{new Date(item.decidedAt).toLocaleTimeString()}</td>
               </tr>
             ))}

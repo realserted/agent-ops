@@ -8,6 +8,15 @@ export default defineConfig({
       { test: { name: "tools", root: "packages/tools" } },
       { test: { name: "cli", root: "apps/cli" } },
       { test: { name: "mcp", root: "apps/mcp" } },
+      // e2e/ holds Playwright specs, which import @playwright/test and cannot
+      // run under vitest; they have their own runner.
+      {
+        test: {
+          name: "dashboard",
+          root: "apps/dashboard",
+          exclude: ["e2e/**", "node_modules/**", ".next/**"],
+        },
+      },
       { test: { name: "evals", root: "packages/evals" } },
       { test: { name: "tracing", root: "packages/tracing" } },
       { test: { name: "approvals", root: "packages/approvals" } },
@@ -26,7 +35,10 @@ export default defineConfig({
         "**/index.ts",
         "apps/cli/src/index.ts",
         "apps/evals/src/index.ts",
-        "apps/dashboard/**",
+        "apps/dashboard/src/app/**",
+        "apps/dashboard/src/components/**",
+        "apps/dashboard/src/lib/runtime.ts",
+        "apps/dashboard/src/lib/provider.ts",
       ],
       // Targets from Phase 2 of docs/HARDENING_PLAN.md. Actual coverage sits
       // well above these; the margin is deliberate headroom for the guardrail

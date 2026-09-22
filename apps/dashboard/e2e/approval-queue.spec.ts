@@ -25,7 +25,7 @@ test.describe("approval queue", () => {
 
     const pending = page.getByTestId("pending-item").first();
     await expect(pending).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId("pending-tool").first()).toHaveText("create_record");
+    await expect(page.getByTestId("pending-tool").first()).toHaveText("create record");
     // The human needs the arguments to decide, not just the tool name.
     await expect(page.getByTestId("pending-args").first()).toContainText("Northwind Supplies");
   });

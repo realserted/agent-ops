@@ -51,7 +51,16 @@ loadRootEnv();
 interface Runtime {
   approvals: ApprovalQueue;
   traces: TraceStore;
-  store: InMemoryOperationsStore;
+  /**
+   * A store per run, keyed by trace id.
+   *
+   * Store entities carry no run id, so one shared store cannot say which run
+   * produced which record — and comparing two models on the same inbox is
+   * exactly the question the results view answers. Giving each run its own
+   * store keeps that inside the dashboard, with no change to OperationsStore,
+   * the tools or the adapters.
+   */
+  stores: Map<string, InMemoryOperationsStore>;
   running: Set<string>;
 }
 
@@ -61,9 +70,24 @@ const globalRef = globalThis as unknown as { [KEY]?: Runtime };
 const freshRuntime = (): Runtime => ({
   approvals: new ApprovalQueue({ timeoutMs: 5 * 60 * 1000 }),
   traces: new InMemoryTraceStore(),
-  store: new InMemoryOperationsStore(),
+  stores: new Map<string, InMemoryOperationsStore>(),
   running: new Set<string>(),
 });
+
+export interface RunResults {
+  records: InMemoryOperationsStore["records"];
+  drafts: InMemoryOperationsStore["drafts"];
+  flags: InMemoryOperationsStore["flags"];
+}
+
+const EMPTY_RESULTS: RunResults = { records: [], drafts: [], flags: [] };
+
+/** What one run produced, or empty totals for a run that produced nothing. */
+export function resultsFor(traceId: string): RunResults {
+  const store = runtime().stores.get(traceId);
+  if (!store) return EMPTY_RESULTS;
+  return { records: store.records, drafts: store.drafts, flags: store.flags };
+}
 
 export function runtime(): Runtime {
   globalRef[KEY] ??= freshRuntime();
@@ -118,6 +142,16 @@ async function resolveInbox(): Promise<InboxChoice> {
   return loadInbox();
 }
 
+/**
+ * The inbox for read-only lookups outside a run.
+ *
+ * Same source a run reads, so the email shown beside an extraction is the one
+ * the agent actually saw.
+ */
+export async function inboxForRequests() {
+  return (await resolveInbox()).inbox;
+}
+
 export interface StartRunResult {
   traceId: string;
 }
@@ -129,13 +163,16 @@ export interface StartRunResult {
  * response open until someone clicked a button in the UI that this response has
  * not yet rendered.
  */
-export async function startRun(task: string): Promise<StartRunResult> {
-  const { approvals, traces, store, running } = runtime();
-  const llm = dashboardProvider();
+export async function startRun(task: string, modelId?: string): Promise<StartRunResult> {
+  const { approvals, traces, stores, running } = runtime();
+  const llm = dashboardProvider(modelId);
   const { inbox } = await resolveInbox();
 
   const trace = await startTrace(traces, { provider: llm.name, model: llm.model, task });
   running.add(trace.traceId);
+
+  const store = new InMemoryOperationsStore();
+  stores.set(trace.traceId, store);
 
   const agent = new Agent({
     llm,

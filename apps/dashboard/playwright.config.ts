@@ -1,6 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+/*
+ * Deliberately not 3100, the port `pnpm dashboard` uses.
+ *
+ * With reuseExistingServer the suite will adopt whatever is already listening.
+ * Sharing a port with the dev server means a running dashboard - real key, real
+ * mailbox - gets used instead of the scripted one, and every test that starts a
+ * run spends money on live mail. A separate port makes that collision
+ * impossible rather than merely unlikely.
+ */
+const PORT = 3177;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -32,7 +41,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter @agent-ops/dashboard start",
+    command: `pnpm --filter @agent-ops/dashboard exec next start --port ${PORT} --hostname 127.0.0.1`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -40,5 +49,11 @@ export default defineConfig({
       // Never call a real API from a test.
       AGENT_OPS_TEST_PROVIDER: "scripted",
     },
+  },
+  // A last line of defence: if the server the suite talks to is not in scripted
+  // mode, fail immediately rather than billing a real provider.
+  globalSetup: "./e2e/guard-scripted.ts",
+  metadata: {
+    baseURL: `http://127.0.0.1:${PORT}`,
   },
 });

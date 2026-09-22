@@ -3,9 +3,21 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { TraceEvent, TraceRun } from "@agent-ops/tracing";
+import { Quarantine } from "../../../components/Quarantine";
+import { RunError } from "../../../components/RunError";
 
 const POLL_MS = 1_500;
 const MAX_PREVIEW = 400;
+
+/** The agent wraps third-party tool output under this key before the model sees it. */
+const UNTRUSTED_KEY = "untrusted_content";
+
+/** Returns the third-party text when output crossed the boundary, else undefined. */
+const untrustedText = (output: unknown): string | undefined => {
+  if (!output || typeof output !== "object") return undefined;
+  const value = (output as Record<string, unknown>)[UNTRUSTED_KEY];
+  return typeof value === "string" ? value : undefined;
+};
 
 const preview = (value: unknown) => {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -39,7 +51,7 @@ export default function TracePage({ params }: { params: Promise<{ traceId: strin
   if (missing) {
     return (
       <>
-        <h1>Trace not found</h1>
+        <h1>No such run</h1>
         <p className="muted">
           <Link href="/">Back to runs</Link>
         </p>
@@ -51,36 +63,16 @@ export default function TracePage({ params }: { params: Promise<{ traceId: strin
 
   return (
     <>
-      <h1>Trace</h1>
-      <div className="panel">
-        <div className="row" style={{ gap: "1.5rem" }}>
-          <span>
-            <span className="muted">Model</span> {run.model}
-          </span>
-          <span>
-            <span className="muted">Status</span> {run.error ? "error" : (run.status ?? "running")}
-          </span>
-          <span>
-            <span className="muted">Steps</span> {run.steps ?? "-"}
-          </span>
-          <span data-testid="trace-tokens">
-            <span className="muted">Tokens</span>{" "}
-            {run.usage ? `${run.usage.inputTokens} in / ${run.usage.outputTokens} out` : "-"}
-          </span>
-          <span data-testid="trace-cost">
-            <span className="muted">Cost</span>{" "}
-            {run.cost === undefined ? "unpriced" : `$${run.cost.toFixed(5)}`}
-          </span>
-        </div>
-        <p className="muted" style={{ margin: "0.6rem 0 0" }}>
-          {run.task}
-        </p>
-        {run.error && (
-          <p className="badge badge-error" style={{ marginTop: "0.6rem" }}>
-            {run.error}
-          </p>
-        )}
-      </div>
+      <h1>{run.task}</h1>
+      <p className="meta" data-testid="trace-summary">
+        {run.model} · {run.error ? "error" : (run.status ?? "running")} · {run.steps ?? 0} steps ·{" "}
+        <span data-testid="trace-tokens">
+          {run.usage ? `${run.usage.inputTokens} in / ${run.usage.outputTokens} out` : "—"}
+        </span>{" "}
+        · <span data-testid="trace-cost">{run.cost === undefined ? "unpriced" : `$${run.cost.toFixed(5)}`}</span> ·{" "}
+        <Link href={`/runs/${run.traceId}`}>see what it produced</Link>
+      </p>
+      {run.error && <RunError error={run.error} />}
 
       <h2>Steps</h2>
       {events.length === 0 ? (
@@ -88,8 +80,8 @@ export default function TracePage({ params }: { params: Promise<{ traceId: strin
       ) : (
         <div data-testid="event-list">
           {events.map((entry) => (
-            <div className="panel step" key={entry.sequence} data-testid={`event-${entry.event.type}`}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
+            <div className="step" key={entry.sequence} data-testid={`event-${entry.event.type}`}>
+              <div className="entry-head" style={{ justifyContent: "space-between" }}>
                 <strong>
                   step {entry.event.step} · {entry.event.type.replace("_", " ")}
                 </strong>
@@ -113,23 +105,31 @@ export default function TracePage({ params }: { params: Promise<{ traceId: strin
 
               {entry.event.type === "tool_result" && (
                 <>
-                  <div className="row" style={{ margin: "0.35rem 0" }}>
-                    <span className={`badge${entry.event.result.isError ? " badge-error" : ""}`}>
+                  <div className="bar" style={{ margin: "0.35rem 0" }}>
+                    <span className={entry.event.result.isError ? "tag-refuse" : "tag"}>
                       {entry.event.result.isError ? "error" : "ok"}
                     </span>
-                    <span>{entry.event.result.name}</span>
+                    <span>{entry.event.result.name.replace(/_/g, " ")}</span>
                   </div>
-                  <pre>{preview(entry.event.result.output)}</pre>
+                  {/*
+                    Output the agent wrapped as untrusted came from outside the
+                    system, so it is shown the same way here as anywhere else.
+                  */}
+                  {untrustedText(entry.event.result.output) ? (
+                    <Quarantine body={untrustedText(entry.event.result.output)} />
+                  ) : (
+                    <pre>{preview(entry.event.result.output)}</pre>
+                  )}
                 </>
               )}
 
               {/* The whole point of the guardrail event is that a human sees it. */}
               {entry.event.type === "guardrail" && (
-                <div className="row" style={{ marginTop: "0.35rem" }}>
-                  <span className="badge badge-warn" data-testid="guardrail-badge">
+                <div className="bar" style={{ marginTop: "0.35rem" }}>
+                  <span className="tag-warn" data-testid="guardrail-badge">
                     injection warning
                   </span>
-                  <span>{entry.event.tool}</span>
+                  <span>{entry.event.tool.replace(/_/g, " ")}</span>
                   <span className="muted">{entry.event.warnings.join(", ")}</span>
                 </div>
               )}
