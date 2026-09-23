@@ -1,4 +1,4 @@
-import { SECRET_PATTERNS } from "@agent-ops/llm";
+import { redactSecrets as redact, SECRET_PATTERNS } from "@agent-ops/llm";
 
 /**
  * Secret-shape detection for outbound text.
@@ -13,4 +13,15 @@ import { SECRET_PATTERNS } from "@agent-ops/llm";
  */
 export function detectSecrets(text: string): string[] {
   return SECRET_PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ name }) => name);
+}
+
+/**
+ * Replaces anything shaped like a credential with a placeholder.
+ *
+ * Re-exported through core so `packages/tools` can redact without taking a
+ * direct dependency on the llm layer, and so detection and redaction keep
+ * sharing one pattern list rather than drifting apart.
+ */
+export function redactSecrets(text: string): string {
+  return redact(text);
 }

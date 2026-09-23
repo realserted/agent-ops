@@ -89,6 +89,36 @@ describe("htmlToText", () => {
     expect(htmlToText("lots     of    space")).toBe("lots of space");
   });
 
+  // Regression: a single strip pass leaves `<div>` behind, because removing the
+  // inner match reassembles a new tag. Not an XSS control - nothing here is
+  // rendered as HTML - but leftover markup in the text a model reads is exactly
+  // what the converter exists to remove.
+  it("removes a tag that reassembles after the first pass", () => {
+    const text = htmlToText("<<div>div>Visible");
+
+    expect(text).toBe("Visible");
+  });
+
+  // A lone "<" left over is not markup and is deliberately kept: stripping bare
+  // angle brackets would mangle ordinary prose like "a < b".
+  it("removes the contents of a script tag however it is nested", () => {
+    const text = htmlToText("<<script>script>alert(1)</script>Text");
+
+    expect(text).not.toContain("alert");
+    expect(text).not.toContain("script");
+    expect(text).toContain("Text");
+  });
+
+  it("terminates on deeply nested angle brackets rather than spinning", () => {
+    const pathological = `${"<".repeat(2000)}div${">".repeat(2000)}Text`;
+
+    const started = performance.now();
+    const text = htmlToText(pathological);
+
+    expect(performance.now() - started).toBeLessThan(250);
+    expect(text).toContain("Text");
+  });
+
   it("returns an empty string for markup with no text", () => {
     expect(htmlToText("<div><span></span></div>")).toBe("");
   });

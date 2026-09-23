@@ -34,6 +34,25 @@ describe("extractUrls", () => {
     expect(extractUrls("Please call me on 555-0100 instead.")).toEqual([]);
   });
 
+  // Regression: the trailing-punctuation and trailing-slash trims were anchored
+  // regex quantifiers, which are quadratic. The URL matcher admits . , ; : ! ?
+  // so a sender could reach them directly - 64k dots took 6.5 seconds, a denial
+  // of service in a guardrail that reads every email. Generous bound so a
+  // loaded CI box does not flake; the point is orders of magnitude, not ms.
+  it.each([
+    ["trailing punctuation", "."],
+    ["trailing slashes", "/"],
+  ])("handles a 64k run of %s in linear time", (_label, character) => {
+    const payload = `Visit http://a.test/${character.repeat(64_000)}x now`;
+
+    const started = performance.now();
+    const found = extractUrls(payload);
+    const elapsed = performance.now() - started;
+
+    expect(elapsed).toBeLessThan(250);
+    expect(found).toHaveLength(1);
+  });
+
   it("does not treat an email address as a link", () => {
     expect(extractUrls("Reach me at ops@example.test")).toEqual([]);
   });

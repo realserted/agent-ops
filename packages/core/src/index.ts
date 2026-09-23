@@ -10,6 +10,7 @@ export {
   DEFAULT_LIMITS,
   detectInjection,
   detectSecrets,
+  redactSecrets,
   extractUrls,
   LOOP_THRESHOLD,
   LoopDetector,

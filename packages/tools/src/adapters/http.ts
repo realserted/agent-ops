@@ -1,3 +1,5 @@
+import { redactSecrets } from "@agent-ops/core";
+
 /**
  * Minimal JSON transport for the external adapters.
  *
@@ -39,9 +41,11 @@ export async function requestJson<T>(
   });
 
   if (!response.ok) {
-    // Truncated: an upstream error body can be large, and it may echo the
-    // request, which carries the credential.
-    const text = (await response.text()).slice(0, MAX_ERROR_BODY);
+    // Truncated and redacted. An upstream error body can be large, and it may
+    // echo the request - which carries the credential. Truncating alone was the
+    // gap CodeQL surfaced as clear-text logging at the console.error that
+    // eventually prints this: the llm layer already redacted, this one did not.
+    const text = redactSecrets((await response.text()).slice(0, MAX_ERROR_BODY));
     throw new AdapterHttpError(`${method} failed (${response.status})`, response.status, text);
   }
 

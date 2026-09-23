@@ -70,6 +70,29 @@ function codePoint(value: number): string {
   return String.fromCodePoint(value);
 }
 
+/** A crafted body cannot spin this; it terminates either way. */
+const MAX_STRIP_PASSES = 5;
+
+/**
+ * Removes tags, repeatedly.
+ *
+ * One pass is not enough: `<<div>div>` leaves `<div>` behind once the inner
+ * match is removed. Nothing here is rendered as HTML, so this is not an XSS
+ * control — it keeps leftover markup out of the text a model reads, which is
+ * the whole point of the converter. Bounded rather than looping to a fixed
+ * point, because terminating predictably matters more than winning a nesting
+ * race.
+ */
+function stripTags(html: string): string {
+  let text = html;
+  for (let pass = 0; pass < MAX_STRIP_PASSES; pass += 1) {
+    const next = text.replace(/<[^>]*>/g, "");
+    if (next === text) return next;
+    text = next;
+  }
+  return text;
+}
+
 /**
  * Converts an HTML mail body into the text a model should read.
  *
@@ -83,11 +106,9 @@ function codePoint(value: number): string {
  * hiding differently.
  */
 export function htmlToText(html: string): string {
-  const withoutMarkup = html
-    .replace(DROPPED_ELEMENTS, " ")
-    .replace(COMMENTS, " ")
-    .replace(BLOCK_TAGS, "\n")
-    .replace(/<[^>]*>/g, "");
+  const withoutMarkup = stripTags(
+    html.replace(DROPPED_ELEMENTS, " ").replace(COMMENTS, " ").replace(BLOCK_TAGS, "\n"),
+  );
 
   return (
     stripInvisible(decodeEntities(withoutMarkup))
