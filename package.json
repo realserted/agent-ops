@@ -17,9 +17,9 @@
     "e2e": "pnpm --filter @agent-ops/dashboard e2e"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.20.4",
     "@vitest/coverage-v8": "^5.0.1",
-    "tsx": "^4.20.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.0",
     "vitest": "^5.0.1"
   }

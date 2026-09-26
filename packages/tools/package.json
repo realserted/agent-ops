@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@agent-ops/core": "workspace:*",
-    "imapflow": "^2.0.5",
+    "imapflow": "^2.0.6",
     "zod": "^4.0.0"
   }
 }
