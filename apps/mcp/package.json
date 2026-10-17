@@ -6,7 +6,7 @@
   "dependencies": {
     "@agent-ops/core": "workspace:*",
     "@agent-ops/tools": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "zod": "^4.0.0"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
   }
 }
